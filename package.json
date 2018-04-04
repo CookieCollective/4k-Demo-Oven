@@ -1,0 +1,33 @@
+{
+  "private": true,
+  "name": "4k-demo-oven",
+  "version": "1.0.0",
+  "description": "Demo framework.",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "clean": "node scripts/clean.js",
+    "capture": "node scripts/capture.js",
+    "precommit": "lint-staged",
+    "watch": "nodemon -e * -w demo -w engine -w scripts scripts/build.js -n"
+  },
+  "dependencies": {
+    "fs-extra": "^5.0.0",
+    "glsl-unit": "^0.0.7",
+    "nconf": "^0.10.0",
+    "nconf-yaml": "^1.0.2",
+    "node-notifier": "^5.1.2",
+    "nodemon": "^1.17.3",
+    "yargs": "^11.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.19.1",
+    "husky": "^0.14.3",
+    "lint-staged": "^7.0.3"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "git add"
+    ]
+  }
+}

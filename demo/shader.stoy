@@ -1,0 +1,95 @@
+uniform float time;
+uniform vec2 synth_Resolution;
+
+//! <group name="Camera"/>
+uniform bool OverrideCamera; //! checkbox[false]
+#include <Camera>
+
+//! <group name="Audio"/>
+uniform float BPM; //! slider[10, 100, 200]
+#define beat (time*BPM/60.)
+
+//! <group name="Raymarching"/>
+uniform float Steps; //! slider[5, 30, 50]
+uniform float DistanceEpsilon; //! slider[0, 0.01, 1]
+
+//! <group name="Scene"/>
+uniform vec3 SphereColor0; //! color[1, 1, 1]
+uniform vec3 SphereColor1; //! color[1, 1, 1]
+
+const float TAU = 6.283;
+
+// begin
+
+struct D
+{
+	float distance;
+	vec3 color;
+};
+
+mat2 rotate(float angle)
+{
+	float c = cos(angle),
+		s = sin(angle);
+	return mat2(c, s, -s, c);
+}
+
+vec3 camera(vec3 ray)
+{
+	// Rotate camera.
+	ray.xy *= rotate(beat);
+	ray.yz *= rotate(beat);
+
+	return ray;
+}
+
+D map(vec3 ray)
+{
+	D data;
+
+	// Repeat spheres.
+	vec3 index = floor((ray + 2.) / 4.);
+	ray = mod(ray + 2., 4.) - 2.;
+
+	// A bouncing ball.
+	float bounce = fract(beat) * (1 - fract(beat)) * 4.;
+	float radius = .2 + .5 * bounce;
+	data.distance = length(ray) - radius;
+	data.color = mix(SphereColor0, SphereColor1, fract(sin(dot(index, vec3(3, 5, 8))) * 1e4));
+
+	return data;
+}
+
+void main() {
+	vec2 uv = gl_FragCoord.xy/synth_Resolution;
+	uv -= .5;
+	uv.x *= synth_Resolution.x / synth_Resolution.y;
+
+	vec3 rayOrigin = camera(vec3(0., 0., -2.));
+	vec3 rayDirection = camera(normalize(vec3(uv, 1. - length(uv) * .5)));
+
+#ifdef SYNTHCLIPSE_ONLY
+	if (OverrideCamera) {
+		getCamera(rayOrigin, rayDirection);
+	}
+#endif
+
+	vec3 ray = rayOrigin;
+	D data;
+
+	// Simple raymarching algorithm.
+	float stepIndex;
+	for (stepIndex = 0.; stepIndex < Steps; ++stepIndex) {
+		data = map(ray);
+		if (abs(data.distance) < DistanceEpsilon)
+			break;
+		ray += rayDirection * data.distance;
+	}
+
+	// Add color and fake ambient occlusion.
+	vec3 color = data.color * (1. - stepIndex / Steps);
+
+	gl_FragColor = vec4(color, 1.);
+}
+
+//! <preset file="shader.preset" />
