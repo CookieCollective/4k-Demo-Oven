@@ -79,13 +79,25 @@ The shader shall contain the line `// begin`. During the build process, the cont
 
 ## Audio tools
 
-The framework supports the following tools:
+The framework supports the following tools. `none` is a fallback tool which plays no music.
 
-[4klang](http://4klang.untergrund.net/) is a modular synthesizer by Dominik 'Gopher' Ries and Paul 'pOWL' Kraus of Alcatraz. It comes in two flavors: `4klang` and `8klang`, the latter is more powerful but takes more space.
+### [4klang](http://4klang.untergrund.net/)
 
-[Oidos](https://github.com/askeksa/Oidos) is an additive synthesizer by Aske Simon 'Blueberry' Christensen. Follow the [Pouet thread](http://www.pouet.net/prod.php?which=69524) for precompiled releases.
+Modular synthesizer by Dominik 'Gopher' Ries and Paul 'pOWL' Kraus of Alcatraz. It comes in two flavors: `4klang` and `8klang`, the latter is more powerful but takes more space.
 
-`none` is a fallback tool which plays no music.
+[Getting started video](https://www.youtube.com/watch?v=wP__g_9FT4M)
+
+Within the VST, record and export the song into the `demo` directory. This will generate `4klang.h` and `4klang.inc` files.
+
+Give the path to *4klang* or *8klang* sources, in *config.local.yml* as `paths:4klang` or `paths:8klang`. There shall be a file *4klang.asm* inside.
+
+### [Oidos](https://github.com/askeksa/Oidos)
+
+Additive synthesizer by Aske Simon 'Blueberry' Christensen. Follow the [Pouet thread](http://www.pouet.net/prod.php?which=69524) for precompiled releases.
+
+*Oidos* converts the Renoise song into an assembly code. *Python 2* is required for that. If `python` is not available in the PATH, give the path to it in *config.local.yml* as `paths:python2`.
+
+Give the path to *Oidos* sources in *config.local.yml* as `paths:oidos`. There shall be directories *convert* and *player* inside.
 
 ## Capture
 
