@@ -91,8 +91,6 @@ config.defaults({
 		filename: 'shader.stoy',
 		globals: {},
 		time: {
-			beatConstant: 'beat',
-			bpmUniform: 'BPM',
 		},
 		uniforms: [],
 	},

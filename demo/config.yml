@@ -7,3 +7,4 @@ demo:
 shader:
   globals:
     float:
+      - TAU = 6.283
