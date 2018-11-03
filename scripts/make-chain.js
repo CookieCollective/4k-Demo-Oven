@@ -189,16 +189,28 @@ function makeChain(config, options) {
 			'--output=' + join(options.buildDirectory, 'shader.min.glsl'),
 		]))
 
-		.then(() => readFile(join(options.buildDirectory, 'shader.min.glsl')))
+		.then(() => readFile(join(options.buildDirectory, options.nominify ? 'shader.glsl' : 'shader.min.glsl')))
 		.then(contents => {
-			const lines = contents.toString().split('\n');
-			const shader = lines[lines.length - 1];
+			let shader;
+
+			if (options.nominify) {
+				shader = contents.toString().replace(/\n/g, '\\n').replace(/"/g, '\\"');
+			}
+			else {
+				const lines = contents.toString().split('\n');
+				shader = lines[lines.length - 1];
+			}
 
 			const headerContents = [
 				'static const char *shaderSource = "' + shader.replace(/\r/g, '') + '";',
-				'#define UNIFORM_COUNT ' + uniforms.length,
-				'static float uniforms[UNIFORM_COUNT];'
+				'#define UNIFORM_FLOAT_COUNT ' + uniforms.length,
+				'static float uniforms[UNIFORM_FLOAT_COUNT];'
 			];
+
+			if (options.debug)
+				headerContents.push(
+					'#define DEBUG'
+				);
 
 			uniforms.forEach((name, index) => {
 				name = name
@@ -385,6 +397,7 @@ function makeChain(config, options) {
 
 		.then(() => spawn(config.get('paths:crinkler'),
 			config.get('crinkler:args')
+				.concat(options.debug ? config.get('crinkler:debugArgs') : '')
 				.concat([
 					'/REPORT:' + join(options.buildDirectory, 'stats.html'),
 					'/OUT:' + options.exePath,

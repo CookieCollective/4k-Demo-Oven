@@ -59,6 +59,10 @@ config.defaults({
 			'kernel32.lib',
 			'user32.lib',
 		],
+		debugArgs: [
+			'msvcrt.lib',
+			'msvcprt.lib',
+		],
 	},
 	demo: {
 		audioFilename: demoAudioFilename,
