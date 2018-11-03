@@ -77,6 +77,35 @@ Save the controls' values into a preset. By default, the framework will compile 
 
 The shader shall contain the line `// begin`. During the build process, the contents before the line is removed, and replaced by a generated block defining uniforms and consts as set in *config.yml*.
 
+## Debugging & Minifying
+
+You can enable debugging by adding the parameter *debug* to the build process :
+
+	npm run build debug
+
+It will add `#define DEBUG` in the engine code, which will display : openGL version, shader copile errors, uniform indices in console and/or message box.
+
+If you don't want your shader to be minified, for debugging purpose, you can add the parameter *nominify* :
+
+	npm run build debug nominify
+
+
+## Usage of multiple buffers
+
+If you wish to add multiple buffers feature, you can enable it by adding `#define BUFFERS 3` in the engine file *gl.hpp* to have 3 buffers.  
+
+The engine will execute multiple renders to texture, which you will be able to sample from your shader.
+To do so, you will need to declare `uniform sampler2D buffer_n` as many time as there are buffers. As the uniform are not bind with the variable name but with their indices, your declaration will need to respect the order of the buffers (use *debug* parameter to watch that uniforms indices are matching the code in *entry.cpp*).
+
+Only one shader is used for the multiple buffer passes, the `uniform int PASSINDEX` will tells which passes is being rendered.
+Only the last buffer pass will be displayed to the screen, the other ones will be rendered off-screen. (With 3 buffers, the displayed one will be code under the condition : `if (PASSINDEX == 2)`)
+
+Additional notes :  
+* All buffers are the same size as the screen, but you can modify the code to suit you needs, as well as texture filtering, mipmaps...
+* Render passes use dual buffers to allow simultaneous read/writing to the same pass.
+* If you don't need multiple buffers but want to sample backbuffer (last frame) use : `#define BUFFERS 1`  
+* If you don't need multiple buffers and don't need to sample backbuffer, do not declare `#define BUFFERS` in the code.
+
 ## Audio tools
 
 The framework supports the following tools. `none` is a fallback tool which plays no music.
