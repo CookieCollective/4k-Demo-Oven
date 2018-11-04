@@ -4,6 +4,7 @@
 demo:
   audioTool: none
   name: template
+  glslversion: 330
 shader:
   globals:
     float:

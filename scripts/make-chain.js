@@ -166,8 +166,10 @@ function makeChain(config, options) {
 
 				let newShader = [
 					'//! FRAGMENT',
+					config.get('demo:glslversion') ? '#version ' + config.get('demo:glslversion') : '',
 					'uniform float _[' + uniforms.length + '];',
 				]
+
 					.concat(Object.keys(globals).map(type => {
 						return type + ' ' + globals[type].join(', ') + ';';
 					}))
