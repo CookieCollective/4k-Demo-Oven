@@ -4,6 +4,11 @@
 
 #define BUFFERS 3
 
+#if defined(BUFFERS) || defined(AUDIO_TEXTURE)
+#define TEXTURE_NEED
+#define FRAMEBUFFER_NEED
+#endif
+
 // relevant glext.h fragment
 #define APIENTRYP __stdcall *
 typedef char GLchar;
@@ -16,7 +21,7 @@ typedef void(APIENTRYP PFNGLLINKPROGRAMPROC)(GLuint program);
 typedef void(APIENTRYP PFNGLSHADERSOURCEPROC)(GLuint shader, GLsizei count, const GLchar *const *string, const GLint *length);
 typedef void(APIENTRYP PFNGLUSEPROGRAMPROC)(GLuint program);
 typedef void(APIENTRYP PFNGLUNIFORM1FVPROC)(GLint location, GLsizei count, const GLfloat *value);
-#ifdef BUFFERS
+#ifdef FRAMEBUFFER_NEED
 #define GL_FRAMEBUFFER 0x8D40
 #define GL_COLOR_ATTACHMENT0 0x8CE0
 #define GL_READ_FRAMEBUFFER 0x8CA8
@@ -26,7 +31,8 @@ typedef void (APIENTRYP PFNGLBINDFRAMEBUFFEREXTPROC) (GLenum target, GLuint fram
 typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE2DEXTPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
 typedef void (APIENTRYP PFNGLBLITFRAMEBUFFERPROC) (GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
 #endif
-#if defined(BUFFERS) || defined(TEXTURE)
+#ifdef TEXTURE_NEED
+#define GL_RGBA32F 0x8814
 #define GL_TEXTURE0 0x84C0
 typedef void (APIENTRYP PFNGLUNIFORM1IPROC) (GLint location, GLint v0);
 typedef void (APIENTRYP PFNGLACTIVETEXTUREPROC) (GLenum texture);
@@ -42,9 +48,9 @@ typedef GLint (APIENTRYP PFNGLGETUNIFORMLOCATIONPROC) (GLuint program, const GLc
 #endif
 // end of glext.h fragment
 
-#ifdef BUFFERS
+#ifdef FRAMEBUFFER_NEED
 #define GL_EXT_FUNCTION_COUNT 14
-#elif defined(TEXTURE)
+#elif defined(TEXTURE_NEED)
 #define GL_EXT_FUNCTION_COUNT 10
 #else
 #define GL_EXT_FUNCTION_COUNT 8
@@ -61,12 +67,12 @@ static const char *glExtFunctionNames[] = {
 	"glUseProgram",
 	"glUniform1fv",
 
-	#if defined(BUFFERS) || defined(TEXTURE)
+	#ifdef TEXTURE_NEED
 	"glUniform1i",
 	"glActiveTexture",
 	#endif
 
-	#ifdef BUFFERS
+	#ifdef FRAMEBUFFER_NEED
 	"glGenFramebuffers",
 	"glBindFramebuffer",
 	"glFramebufferTexture2D",
@@ -86,12 +92,12 @@ static void *glExtFunctions[GL_EXT_FUNCTION_COUNT];
 #define glUseProgram ((PFNGLUSEPROGRAMPROC)glExtFunctions[6])
 #define glUniform1fv ((PFNGLUNIFORM1FVPROC)glExtFunctions[7])
 
-#if defined(BUFFERS) || defined(TEXTURE)
+#ifdef TEXTURE_NEED
 #define glUniform1i ((PFNGLUNIFORM1IPROC)glExtFunctions[8])
 #define glActiveTexture ((PFNGLACTIVETEXTUREPROC)glExtFunctions[9])
 #endif
 
-#ifdef BUFFERS
+#ifdef FRAMEBUFFER_NEED
 #define glGenFramebuffers ((PFNGLGENFRAMEBUFFERSEXTPROC)glExtFunctions[10])
 #define glBindFramebuffer ((PFNGLBINDFRAMEBUFFEREXTPROC)glExtFunctions[11])
 #define glFramebufferTexture2D ((PFNGLFRAMEBUFFERTEXTURE2DEXTPROC)glExtFunctions[12])
