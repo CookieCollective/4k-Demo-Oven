@@ -108,7 +108,7 @@ Additional notes :
 
 ## Audio tools
 
-The framework supports the following tools. `none` is a fallback tool which plays no music.
+An audio tool can be set in the config file at `demo:audioTool`. `none` is a fallback tool which plays no music. The framework supports the following tools.
 
 ### [4klang](http://4klang.untergrund.net/)
 
@@ -127,6 +127,11 @@ Additive synthesizer by Aske Simon 'Blueberry' Christensen. Follow the [Pouet th
 *Oidos* converts the Renoise song into an assembly code. *Python 2* is required for that. If `python` is not available in the PATH, give the path to it in *config.local.yml* as `paths:python2`.
 
 Give the path to *Oidos* sources in *config.local.yml* as `paths:oidos`. There shall be directories *convert* and *player* inside.
+
+### Shader
+
+Lets you make your own sound wave with a fragment shader. By default a 2048^2 pixels texture will be generated. At 44100, the whole texture can hold 190 seconds of sound. You can enable audio shader by setting the value of `demo:audioTool` to `shader` in the config file. See details of implementation in `shader.stoy`, `entry.cpp` and `audio-shader.cpp`.
+
 
 ## Capture
 

@@ -214,6 +214,12 @@ function makeChain(config, options) {
 					'#define DEBUG'
 				);
 
+			if (config.get('demo:audioTool') == 'shader')
+				headerContents.unshift(
+					'#include "audio-shader.cpp"',
+					'#define AUDIO_TEXTURE',
+				);
+
 			uniforms.forEach((name, index) => {
 				name = name
 					.replace(/^\w|\b\w/g, letter => letter.toUpperCase())

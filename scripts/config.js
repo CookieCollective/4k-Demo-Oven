@@ -66,7 +66,7 @@ config.defaults({
 	},
 	demo: {
 		audioFilename: demoAudioFilename,
-		audioTool: 'none', // or 4klang, 8klang, oidos
+		audioTool: 'shader', // or 4klang, 8klang, oidos, none, shader
 		closeWhenFinished: false,
 		// name
 		resolution: {
@@ -113,6 +113,7 @@ if ([
 	'8klang',
 	'none',
 	'oidos',
+	'shader',
 ].indexOf(config.get('demo:audioTool')) === -1) {
 	throw new Error('Config key "demo:audioTool" is not valid.');
 }

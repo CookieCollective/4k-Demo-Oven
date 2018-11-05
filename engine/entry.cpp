@@ -163,6 +163,30 @@ void entry()
     printf ("uniform id for b2 : %ld\n", glGetUniformLocation(program,"b2"));
 #endif
 
+#ifdef AUDIO_TEXTURE
+
+	glViewport(0,0,SOUND_TEXTURE_SIZE,SOUND_TEXTURE_SIZE);
+	glBindFramebuffer (GL_FRAMEBUFFER, fbo);
+	glUniform1i(0,-1); //int : (PASSINDEX)
+
+	GLuint soundTexID;
+  glGenTextures(1,&soundTexID);
+	glBindTexture(GL_TEXTURE_2D, soundTexID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, SOUND_TEXTURE_SIZE, SOUND_TEXTURE_SIZE, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, soundTexID, 0);
+
+	glRects(-1, -1, 1, 1);
+
+	glReadPixels(0,0,SOUND_TEXTURE_SIZE,SOUND_TEXTURE_SIZE,GL_RGBA,GL_FLOAT,soundBuffer);
+  glViewport(0,0,width,height);
+
+#ifdef DEBUG
+	for (int i=0; i<10; i++)
+	   printf("sound sample[%d] L/R : %f/%f \n", i, soundBuffer[i*2], soundBuffer[i*2+1]);
+#endif
+#endif
 	audioStart();
 
 	do
@@ -178,34 +202,34 @@ void entry()
 		// Assume that the uniforms u[] will always be linked to locations [0-n].
 		// Given that they are the only uniforms in the shader, it is likely to work on all drivers.
 #ifdef BUFFERS
-      glBindFramebuffer (GL_FRAMEBUFFER, fbo);
+    glBindFramebuffer (GL_FRAMEBUFFER, fbo);
 
-			for (auto i=0; i<BUFFERS; i++)
-			{
-        //assign uniform value with hardcoded indices, use glGetUniformLocation is better but adds more line of codes
-				//uniforms can be automatically removed if not used, thus removes/offsets all the following uniforms !
-        glUniform1i(0,i); //int : (PASSINDEX)
-        glUniform1fv(1, UNIFORM_FLOAT_COUNT, uniforms); // floats "_[UNIFORM_FLOAT_COUNT]"
-        glUniform1i(UNIFORM_FLOAT_COUNT+1+i,i); // samplers b0, b1 ..
+		for (auto i=0; i<BUFFERS; i++)
+		{
+      //assign uniform value with hardcoded indices, use glGetUniformLocation is better but adds more line of codes
+			//uniforms can be automatically removed if not used, thus removes/offsets all the following uniforms !
+      glUniform1i(0,i); //int : (PASSINDEX)
+      glUniform1fv(1, UNIFORM_FLOAT_COUNT, uniforms); // floats "_[UNIFORM_FLOAT_COUNT]"
+      glUniform1i(UNIFORM_FLOAT_COUNT+1+i,i); // samplers b0, b1 ..
 
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID[i*2+swapped], 0);
-				glRects(-1, -1, 1, 1);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID[i*2+swapped], 0);
+			glRects(-1, -1, 1, 1);
 
-				glActiveTexture(GL_TEXTURE0 + i);
-				glBindTexture(GL_TEXTURE_2D, textureID[i*2+swapped]);
-			}
+			glActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_2D, textureID[i*2+swapped]);
+		}
 
-			swapped = !swapped;
+		swapped = !swapped;
 
-			//blit last buffer (fbo) to the displayed frame buffer (0)
-      //TODO : Blit can cost performances, better render the last buffer directly to the displayed framebuffer (0) ?
-			glBindFramebuffer (GL_DRAW_FRAMEBUFFER, 0);
-			glDrawBuffer      (GL_BACK);
+		//blit last buffer (fbo) to the displayed frame buffer (0)
+    //TODO : Blit can cost performances, better render the last buffer directly to the displayed framebuffer (0) ?
+		glBindFramebuffer (GL_DRAW_FRAMEBUFFER, 0);
+		glDrawBuffer      (GL_BACK);
 
-			glBlitFramebuffer (0,0, width,height,
-			                   0,0, width,height,
-			                   GL_COLOR_BUFFER_BIT,
-			                   GL_NEAREST);
+		glBlitFramebuffer (0,0, width,height,
+		                   0,0, width,height,
+		                   GL_COLOR_BUFFER_BIT,
+		                   GL_NEAREST);
 #else
     glUniform1fv(0, UNIFORM_FLOAT_COUNT, uniforms);
 		glRects(-1, -1, 1, 1);

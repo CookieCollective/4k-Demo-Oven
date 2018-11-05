@@ -2,7 +2,7 @@
 # Use this file to customize your demo.
 # Write computer specific settings in config.local.yml, which won't be versioned.
 demo:
-  audioTool: none
+  audioTool: shader
   name: template
   glslversion: 330
 shader:

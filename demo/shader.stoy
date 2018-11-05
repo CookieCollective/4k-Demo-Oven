@@ -3,41 +3,54 @@ uniform vec2 synth_Resolution;
 
 // begin
 
-//precision highp float;
 uniform sampler2D b0;
 uniform sampler2D b1;
 uniform sampler2D b2;
 uniform int	PASSINDEX;
 
+vec2 SoundMain(float _time)
+{
+    vec2 results = vec2(0,0);
+    results.x = sin(_time*1200.+1000.*sin(_time*0.2));
+    results.y = sin(_time*1500.+1000.*sin(_time*0.2));
+    results *= sin(_time*400.+20.*sin(_time*11.5));
+    return results*results*results;
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / synth_Resolution;
 
-
-
-    if (PASSINDEX == 0)
+    if (PASSINDEX == -1) //process sound
     {
-      gl_FragColor = vec4(1,0,0,1); //red
+      float t = 2.*((gl_FragCoord.x-0.5) + (gl_FragCoord.y-0.5)*2048.0)/44100.;
+      vec2 res = SoundMain(t);
+      gl_FragColor.xy = res;
+      res = SoundMain(t+(1./44100.));
+      gl_FragColor.zw = res;
+    }
+    else if (PASSINDEX == 0)
+    {
+      gl_FragColor = vec4(1,.5,.1,1); //red
     }
     else if (PASSINDEX == 1)
     {
-      gl_FragColor = vec4(0,0,1,1); //blue
+      gl_FragColor = vec4(.1,.5,1,1); //blue
     }
     else
     {
-
       //rotate uvs
       vec2 uv2 = (uv.x-.5)*(vec2(cos(time),sin(time)));
       uv2 += (uv.y-.5)*(vec2(sin(time),-cos(time)));
 
       //sample backbuffer
-      gl_FragColor = texture2D(b2, uv);
+      gl_FragColor = texture2D(b2, uv + (uv-0.5)*0.001 + sin(uv + vec2(time,0.9*time))*0.001);
 
       //factor buf 1 & 2 factors
-      float reveal = (sin(time*11.5)) * 0.005;
+      float reveal = (sin(time*50.5)) * 0.005;
 
-      if (abs(uv2.y) < 0.003)
+      if (abs(uv2.y) > 0.3)
       {
-        if (uv2.x < .0)
+        if (mod(uv2.x,0.1) < .05)
           gl_FragColor += texture2D(b0, uv)*reveal;
         else
           gl_FragColor += texture2D(b1, uv)*reveal;
