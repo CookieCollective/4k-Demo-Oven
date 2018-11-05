@@ -137,15 +137,15 @@ void entry()
 	bool swapped;
 
   //Here we create textures, you can change the size of textures, filtering, add mipmaps, to suit your need
-	GLuint textureID[BUFFERS*2];
-  glGenTextures(BUFFERS*2,textureID);
+	// GLuint textureID[BUFFERS*2];
+  // glGenTextures(BUFFERS*2,textureID);
 
 	for (int i=0; i<BUFFERS*2; i++)
 	{
-		glBindTexture(GL_TEXTURE_2D, textureID[i]);
+		glBindTexture(GL_TEXTURE_2D, i);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
   //Only one framebuffer to save line of codes, we change the render targets for each buffer in the rendering loop
@@ -169,13 +169,10 @@ void entry()
 	glBindFramebuffer (GL_FRAMEBUFFER, fbo);
 	glUniform1i(0,-1); //int : (PASSINDEX)
 
-	GLuint soundTexID;
-  glGenTextures(1,&soundTexID);
-	glBindTexture(GL_TEXTURE_2D, soundTexID);
+	glBindTexture(GL_TEXTURE_2D, 1234);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, SOUND_TEXTURE_SIZE, SOUND_TEXTURE_SIZE, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, soundTexID, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 1234, 0);
 
 	glRects(-1, -1, 1, 1);
 
@@ -212,11 +209,11 @@ void entry()
       glUniform1fv(1, UNIFORM_FLOAT_COUNT, uniforms); // floats "_[UNIFORM_FLOAT_COUNT]"
       glUniform1i(UNIFORM_FLOAT_COUNT+1+i,i); // samplers b0, b1 ..
 
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID[i*2+swapped], 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, i*2+swapped, 0);
 			glRects(-1, -1, 1, 1);
 
 			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, textureID[i*2+swapped]);
+			glBindTexture(GL_TEXTURE_2D, i*2+swapped);
 		}
 
 		swapped = !swapped;
