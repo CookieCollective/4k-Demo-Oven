@@ -5,6 +5,7 @@ demo:
   audioTool: shader
   name: template
   glslversion: 330
+  bufferCount: 3
 shader:
   globals:
     float:

@@ -214,6 +214,11 @@ function makeChain(config, options) {
 					'#define DEBUG'
 				);
 
+			if (config.get('demo:bufferCount') && config.get('demo:bufferCount') != '0')
+				headerContents.push(
+					'#define BUFFERS '+config.get('demo:bufferCount')
+				);
+
 			if (config.get('demo:audioTool') == 'shader')
 				headerContents.unshift(
 					'#include "audio-shader.cpp"',

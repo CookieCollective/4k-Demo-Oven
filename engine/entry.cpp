@@ -149,6 +149,9 @@ void entry()
 	}
 
   //Only one framebuffer to save line of codes, we change the render targets for each buffer in the rendering loop
+#endif
+
+#if defined(AUDIO_TEXTURE) || defined(BUFFERS)
 	unsigned int fbo;
 	glGenFramebuffers(1, &fbo);
 #endif

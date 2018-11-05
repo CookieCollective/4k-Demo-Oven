@@ -2,8 +2,6 @@
 
 #include <GL/gl.h>
 
-#define BUFFERS 3
-
 #if defined(BUFFERS) || defined(AUDIO_TEXTURE)
 #define TEXTURE_NEED
 #define FRAMEBUFFER_NEED

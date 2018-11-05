@@ -92,7 +92,7 @@ If you don't want your shader to be minified, for debugging purpose, you can add
 
 ## Usage of multiple buffers
 
-If you wish to add multiple buffers feature, you can enable it by adding `#define BUFFERS 3` in the engine file *gl.hpp* to have 3 buffers.  
+If you wish to add multiple buffers feature, you can enable it by adding `demo:bufferCount: 3` in the config file to have 3 buffers.  
 
 The engine will execute multiple renders to texture, which you will be able to sample from your shader.
 To do so, you will need to declare `uniform sampler2D buffer_n` as many time as there are buffers. As the uniform are not bind with the variable name but with their indices, your declaration will need to respect the order of the buffers (use *debug* parameter to watch that uniforms indices are matching the code in *entry.cpp*).
@@ -103,8 +103,8 @@ Only the last buffer pass will be displayed to the screen, the other ones will b
 Additional notes :  
 * All buffers are the same size as the screen, but you can modify the code to suit you needs, as well as texture filtering, mipmaps...
 * Render passes use dual buffers to allow simultaneous read/writing to the same pass.
-* If you don't need multiple buffers but want to sample backbuffer (last frame) use : `#define BUFFERS 1`  
-* If you don't need multiple buffers and don't need to sample backbuffer, do not declare `#define BUFFERS` in the code.
+* If you don't need multiple buffers but want to sample backbuffer (last frame) use : `demo:bufferCount: 1`  
+* If you don't need multiple buffers and don't need to sample backbuffer, use : `demo:bufferCount: 0`
 
 ## Audio tools
 
