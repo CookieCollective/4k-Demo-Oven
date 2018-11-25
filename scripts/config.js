@@ -47,7 +47,7 @@ config.defaults({
 	},
 	crinkler: {
 		args: [
-			'/ENTRY:entry',
+			'/ENTRY:main',
 			'/PRIORITY:NORMAL',
 			'/COMPMODE:FAST',
 			'/RANGE:opengl32',
@@ -59,14 +59,19 @@ config.defaults({
 			'kernel32.lib',
 			'user32.lib',
 		],
-		debugArgs: [
-			'msvcrt.lib',
-			'msvcprt.lib',
-		],
 	},
+	debugLinkArgs: [
+		'/SUBSYSTEM:CONSOLE',
+		'/MACHINE:X86',
+		'winmm.lib',
+		'gdi32.lib',
+		'opengl32.lib',
+		'kernel32.lib',
+		'user32.lib',
+	],
 	demo: {
 		audioFilename: demoAudioFilename,
-		audioTool: 'shader', // or 4klang, 8klang, oidos, none, shader
+		audioTool: 'none', // or 4klang, 8klang, oidos, none, shader
 		closeWhenFinished: false,
 		// name
 		resolution: {
@@ -78,9 +83,9 @@ config.defaults({
 	},
 	paths: {
 		// 4klang
-		'7z': '7z',
+		'7z': 'G:\\Program Files (x86)\\7-Zip\\7zG.exe',
 		// 8klang
-		crinkler: 'crinkler',
+		crinkler: 'G:\\Kush\\Documents\\Demoscene\\crinkler20a\\crinkler.exe',
 		ffmpeg: 'ffmpeg',
 		nasm: 'nasm',
 		// oidos

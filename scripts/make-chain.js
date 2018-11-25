@@ -222,7 +222,7 @@ function makeChain(config, options) {
 			if (config.get('demo:audioTool') == 'shader')
 				headerContents.unshift(
 					'#include "audio-shader.cpp"',
-					'#define AUDIO_TEXTURE',
+					'#define AUDIO_TEXTURE'
 				);
 
 			uniforms.forEach((name, index) => {
@@ -408,13 +408,19 @@ function makeChain(config, options) {
 					])))),
 		]))
 
-		.then(() => spawn(config.get('paths:crinkler'),
-			config.get('crinkler:args')
-				.concat(options.debug ? config.get('crinkler:debugArgs') : '')
-				.concat([
-					'/REPORT:' + join(options.buildDirectory, 'stats.html'),
-					'/OUT:' + options.exePath,
-				])
+		.then(() => spawn(options.debug ? 'Link' : config.get('paths:crinkler'),
+			(options.debug ?
+				config.get('debugLinkArgs')
+					.concat([
+						'/OUT:' + options.exePath,
+					])
+				:
+				config.get('crinkler:args')
+					.concat([
+						'/REPORT:' + join(options.buildDirectory, 'stats.html'),
+						'/OUT:' + options.exePath,
+					])
+			)
 				.concat(Object.keys(asmSources))
 				.concat(Object.keys(cppSources))
 		));

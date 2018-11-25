@@ -57,7 +57,7 @@ void CheckGLError()
 }
 #endif
 
-void entry()
+void main()
 {
 #ifndef FORCE_RESOLUTION
 	width = GetSystemMetrics(SM_CXSCREEN);
@@ -181,6 +181,7 @@ void entry()
 
 	glReadPixels(0,0,SOUND_TEXTURE_SIZE,SOUND_TEXTURE_SIZE,GL_RGBA,GL_FLOAT,soundBuffer);
   glViewport(0,0,width,height);
+  glFinish();
 
 #ifdef DEBUG
 	for (int i=0; i<10; i++)
