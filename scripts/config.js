@@ -83,9 +83,9 @@ config.defaults({
 	},
 	paths: {
 		// 4klang
-		'7z': 'G:\\Program Files (x86)\\7-Zip\\7zG.exe',
+		'7z': '7z',
 		// 8klang
-		crinkler: 'G:\\Kush\\Documents\\Demoscene\\crinkler20a\\crinkler.exe',
+		crinkler: 'crinkler',
 		ffmpeg: 'ffmpeg',
 		nasm: 'nasm',
 		// oidos
