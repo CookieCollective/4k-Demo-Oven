@@ -123,7 +123,7 @@ function makeChain(config, options) {
 					.replace(/#ifndef\s+SYNTHCLIPSE_ONLY([\s\S]*?)(?:#else[\s\S]*?)?#endif/g, '$1')
 					.replace(/\bconst\b/g, '');
 
-				const globals = config.get('shader:globals') || {};
+				let globals = config.get('shader:globals') || {};
 
 				function addGlobal(type, value) {
 					if (!globals[type])
@@ -163,6 +163,7 @@ function makeChain(config, options) {
 				});
 
 				const shaderLines = shader.split('\n');
+				Object.keys(globals).forEach((type) => (globals[type] == null) && delete globals[type]);
 
 				let newShader = [
 					'//! FRAGMENT',
