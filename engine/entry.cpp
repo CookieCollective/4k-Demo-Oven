@@ -134,15 +134,15 @@ void main()
 #ifdef BUFFERS
   //As we use 2 textures for each buffer for each buffer, "swapped" will tell which texture to render, changes at each frame
   //dualbuffering prevents reading and writing to the same render target
-	bool swapped;
+	bool swapped = false; //initilization costs 13 byte :(
 
   //Here we create textures, you can change the size of textures, filtering, add mipmaps, to suit your need
-	// GLuint textureID[BUFFERS*2];
-  // glGenTextures(BUFFERS*2,textureID);
+	GLuint textureID[BUFFERS*2];
+  glGenTextures(BUFFERS*2,textureID);
 
 	for (int i=0; i<BUFFERS*2; i++)
 	{
-		glBindTexture(GL_TEXTURE_2D, i);
+		glBindTexture(GL_TEXTURE_2D, textureID[i]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -213,11 +213,11 @@ void main()
       glUniform1fv(1, UNIFORM_FLOAT_COUNT, uniforms); // floats "_[UNIFORM_FLOAT_COUNT]"
       glUniform1i(UNIFORM_FLOAT_COUNT+1+i,i); // samplers b0, b1 ..
 
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, i*2+swapped, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID[i*2+swapped], 0);
 			glRects(-1, -1, 1, 1);
 
 			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, i*2+swapped);
+			glBindTexture(GL_TEXTURE_2D, textureID[i*2+swapped]);
 		}
 
 		swapped = !swapped;
