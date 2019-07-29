@@ -95,6 +95,10 @@ export function getConfig(options: IOptions) {
 			audioTool: 'none', // or 4klang, 8klang, none, oidos, shader
 			closeWhenFinished: false,
 			// name
+			openGl: {
+				constants: [],
+				functions: [],
+			},
 			resolution: {
 				// height
 				// scale
@@ -135,6 +139,7 @@ export function getConfig(options: IOptions) {
 			// 8klang
 			crinkler: 'crinkler',
 			ffmpeg: 'ffmpeg',
+			// glext
 			nasm: 'nasm',
 			// oidos
 			python2: 'python',
@@ -150,6 +155,7 @@ export function getConfig(options: IOptions) {
 		'shader:filename',
 		'shader:globals',
 		'shader:uniforms',
+		'tools:glext',
 	]);
 
 	if (options.capture) {

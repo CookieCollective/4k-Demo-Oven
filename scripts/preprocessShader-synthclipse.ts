@@ -8,11 +8,10 @@ export async function preprocessShader(config: Config) {
 	const uniformNames: string[] = config.get('shader:uniforms').slice();
 	uniformNames.unshift('time');
 
-	const shaderBuffer = await readFile(
-		join('demo', config.get('shader:filename'))
+	const shaderContents = await readFile(
+		join('demo', config.get('shader:filename')),
+		'utf8'
 	);
-
-	const shaderContents = shaderBuffer.toString();
 
 	const constantsMap: any = {};
 
@@ -22,8 +21,10 @@ export async function preprocessShader(config: Config) {
 	if (!presetFileMatch) {
 		console.warn('Shader does not have any preset file.');
 	} else {
-		const presetBuffer = await readFile(join('demo', presetFileMatch[1]));
-		const presetContents = presetBuffer.toString();
+		const presetContents = await readFile(
+			join('demo', presetFileMatch[1]),
+			'utf8'
+		);
 
 		const presetRegExp = /\/\*!([\s\S]*?<preset\s+name="(\w+?)"[\s\S]*?)\*\//g;
 		let presetFound = false;

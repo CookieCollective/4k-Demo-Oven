@@ -3,7 +3,7 @@ import { series, watch as originalWatch } from 'gulp';
 import { encode as originalEncode, spawnCapture } from './capture';
 import { compile } from './compile';
 import { getConfig } from './config';
-import { writeDemoData } from './demoData';
+import { writeDemoData, writeDemoGl } from './generateSourceCode';
 import { emptyDirectories } from './lib';
 import { minify } from './minify-glslUnit';
 import { Monitor } from './monitor';
@@ -28,6 +28,8 @@ export async function build() {
 			uniformNames,
 		});
 
+		await writeDemoGl(config);
+
 		await compile(config);
 
 		await monitor.notifySuccess();
@@ -50,6 +52,8 @@ export async function capture() {
 	await writeDemoData(config, {
 		uniformNames,
 	});
+
+	await writeDemoGl(config);
 
 	await compile(config);
 
