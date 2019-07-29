@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "commonjs",
+    "lib": ["es2017", "esnext.asynciterable"],
+    "sourceMap": true,
+    "outDir": "dist-scripts",
+    "moduleResolution": "node",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "removeComments": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
+  },
+  "include": ["scripts"]
+}

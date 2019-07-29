@@ -1,61 +1,96 @@
-uniform float time;
+niform float time;
 uniform vec2 synth_Resolution;
+
+//! <group name="Camera"/>
+uniform bool OverrideCamera;//! checkbox[false]
+#include<Camera>
+
+//! <group name="Audio"/>
+uniform float BPM;//! slider[10, 100, 200]
+
+//! <group name="Raymarching"/>
+uniform float Steps;//! slider[5, 30, 50]
+uniform float DistanceEpsilon;//! slider[0, 0.01, 1]
+
+//! <group name="Scene"/>
+uniform vec3 SphereColor0;//! color[1, 1, 1]
+uniform vec3 SphereColor1;//! color[1, 1, 1]
+
+const float TAU=6.283;
 
 // begin
 
-uniform sampler2D b0;
-uniform sampler2D b1;
-uniform sampler2D b2;
-uniform int	PASSINDEX;
+#define beat(time*90./60.)
 
-vec2 SoundMain(float _time)
+struct D
 {
-    vec2 results = vec2(0,0);
-    results.x = sin(_time*1200.+1000.*sin(_time*0.2));
-    results.y = sin(_time*1500.+1000.*sin(_time*0.2));
-    results *= sin(_time*400.+20.*sin(_time*11.5));
-    return results*results*results;
+	float distance;
+	vec3 color;
+};
+
+mat2 rotate(float angle)
+{
+	float c=cos(angle),
+	s=sin(angle);
+	return mat2(c,s,-s,c);
 }
 
-void main() {
-    vec2 uv = gl_FragCoord.xy / synth_Resolution;
+vec3 camera(vec3 ray)
+{
+	// Rotate camera.
+	ray.xy*=rotate(beat);
+	ray.yz*=rotate(beat);
+	
+	return ray;
+}
 
-    if (PASSINDEX == -1) //process sound
-    {
-      float t = 2.*((gl_FragCoord.x-0.5) + (gl_FragCoord.y-0.5)*2048.0)/44100.;
-      vec2 res = SoundMain(t);
-      gl_FragColor.xy = res;
-      res = SoundMain(t+(1./44100.));
-      gl_FragColor.zw = res;
-    }
-    else if (PASSINDEX == 0)
-    {
-      gl_FragColor = vec4(1,.5,.1,1); //red
-    }
-    else if (PASSINDEX == 1)
-    {
-      gl_FragColor = vec4(.1,.5,1,1); //blue
-    }
-    else
-    {
-      //rotate uvs
-      vec2 uv2 = (uv.x-.5)*(vec2(cos(time),sin(time)));
-      uv2 += (uv.y-.5)*(vec2(sin(time),-cos(time)));
+D map(vec3 ray)
+{
+	D data;
+	
+	// Repeat spheres.
+	vec3 index=floor((ray+2.)/4.);
+	ray=mod(ray+2.,4.)-2.;
+	
+	// A bouncing ball.
+	float bounce=fract(beat)*(1-fract(beat))*4.;
+	float radius=.2+.5*bounce;
+	data.distance=length(ray)-radius;
+	data.color=mix(SphereColor0,SphereColor1,fract(sin(dot(index,vec3(3,5,8)))*1e4));
+	
+	return data;
+}
 
-      //sample backbuffer
-      gl_FragColor = texture2D(b2, uv + (uv-0.5)*0.001 + sin(uv + vec2(time,0.9*time))*0.001);
-
-      //factor buf 1 & 2 factors
-      float reveal = (sin(time*50.5)) * 0.005;
-
-      if (abs(uv2.y) > 0.3)
-      {
-        if (mod(uv2.x,0.1) < .05)
-          gl_FragColor += texture2D(b0, uv)*reveal;
-        else
-          gl_FragColor += texture2D(b1, uv)*reveal;
-      }
-    }
+void main(){
+	vec2 uv=gl_FragCoord.xy/synth_Resolution;
+	uv-=.5;
+	uv.x*=synth_Resolution.x/synth_Resolution.y;
+	
+	vec3 rayOrigin=camera(vec3(0.,0.,-2.));
+	vec3 rayDirection=camera(normalize(vec3(uv,1.-length(uv)*.5)));
+	
+	#ifdef SYNTHCLIPSE_ONLY
+	if(OverrideCamera){
+		getCamera(rayOrigin,rayDirection);
+	}
+	#endif
+	
+	vec3 ray=rayOrigin;
+	D data;
+	
+	// Simple raymarching algorithm.
+	float stepIndex;
+	for(stepIndex=0.;stepIndex<Steps;++stepIndex){
+		data=map(ray);
+		if(abs(data.distance)<DistanceEpsilon)
+		break;
+		ray+=rayDirection*data.distance;
+	}
+	
+	// Add color and fake ambient occlusion.
+	vec3 color=data.color*(1.-stepIndex/Steps);
+	
+	gl_FragColor=vec4(color,1.);
 }
 
 //! <preset file="shader.preset" />
