@@ -1,6 +1,6 @@
 import { join, sep } from 'path';
 
-import { Config } from './config';
+import { IConfig } from './config';
 import { spawn } from './lib';
 
 interface ISource {
@@ -13,8 +13,9 @@ interface ISources {
 	[objPath: string]: ISource;
 }
 
-export async function compile(config: Config) {
+export async function compile(config: IConfig) {
 	const buildDirectory: string = config.get('paths:build');
+	const demoDirectory: string = config.get('directory');
 
 	const asmSources: ISources = {};
 	const cppSources: ISources = {};
@@ -22,8 +23,8 @@ export async function compile(config: Config) {
 	cppSources[join(buildDirectory, 'main.obj')] = {
 		dependencies: [
 			join(buildDirectory, 'demo-data.hpp'),
-			join('demo', 'config.yml'),
-			join('demo', 'config.local.yml'),
+			join(demoDirectory, 'config.yml'),
+			join(demoDirectory, 'config.local.yml'),
 		],
 		source: join('engine', 'main.cpp'),
 	};
@@ -31,26 +32,26 @@ export async function compile(config: Config) {
 	if (config.get('capture')) {
 		cppSources[join(buildDirectory, 'audio-capture.obj')] = {
 			dependencies: [
-				join('demo', '4klang.inc'),
-				join('demo', 'config.yml'),
-				join('demo', 'config.local.yml'),
+				join(demoDirectory, '4klang.inc'),
+				join(demoDirectory, 'config.yml'),
+				join(demoDirectory, 'config.local.yml'),
 			],
 			source: join('engine', 'audio-capture.cpp'),
 		};
 	}
 
-	switch (config.get('demo:audioTool')) {
+	switch (config.get('demo:audio:tool')) {
 		case '4klang': {
 			asmSources[join(buildDirectory, '4klang.obj')] = {
-				dependencies: [join('demo', '4klang.inc')],
+				dependencies: [join(demoDirectory, '4klang.inc')],
 				source: join(config.get('tools:4klang'), '4klang.asm'),
 			};
 
 			cppSources[join(buildDirectory, 'audio-4klang.obj')] = {
 				dependencies: [
-					join('demo', '4klang.inc'),
-					join('demo', 'config.yml'),
-					join('demo', 'config.local.yml'),
+					join(demoDirectory, '4klang.inc'),
+					join(demoDirectory, 'config.yml'),
+					join(demoDirectory, 'config.local.yml'),
 				],
 				source: join('engine', 'audio-4klang.cpp'),
 			};
@@ -60,15 +61,15 @@ export async function compile(config: Config) {
 
 		case '8klang': {
 			asmSources[join(buildDirectory, '8klang.obj')] = {
-				dependencies: [join('demo', '4klang.inc')],
+				dependencies: [join(demoDirectory, '4klang.inc')],
 				source: join(config.get('tools:8klang'), '4klang.asm'),
 			};
 
 			cppSources[join(buildDirectory, 'audio-8klang.obj')] = {
 				dependencies: [
-					join('demo', '4klang.inc'),
-					join('demo', 'config.yml'),
-					join('demo', 'config.local.yml'),
+					join(demoDirectory, '4klang.inc'),
+					join(demoDirectory, 'config.yml'),
+					join(demoDirectory, 'config.local.yml'),
 				],
 				source: join('engine', 'audio-4klang.cpp'),
 			};
@@ -79,8 +80,8 @@ export async function compile(config: Config) {
 		case 'none': {
 			cppSources[join(buildDirectory, 'audio-none.obj')] = {
 				dependencies: [
-					join('demo', 'config.yml'),
-					join('demo', 'config.local.yml'),
+					join(demoDirectory, 'config.yml'),
+					join(demoDirectory, 'config.local.yml'),
 				],
 				source: join('engine', 'audio-none.cpp'),
 			};
@@ -91,7 +92,7 @@ export async function compile(config: Config) {
 		case 'oidos': {
 			await spawn(config.get('tools:python2'), [
 				join(config.get('tools:oidos'), 'convert', 'OidosConvert.py'),
-				join('demo', config.get('demo:audioFilename')),
+				join(demoDirectory, config.get('demo:audio:filename')),
 				join(buildDirectory, 'music.asm'),
 			]);
 
@@ -106,8 +107,8 @@ export async function compile(config: Config) {
 
 			cppSources[join(buildDirectory, 'audio-oidos.obj')] = {
 				dependencies: [
-					join('demo', 'config.yml'),
-					join('demo', 'config.local.yml'),
+					join(demoDirectory, 'config.yml'),
+					join(demoDirectory, 'config.local.yml'),
 				],
 				includes: [join(config.get('tools:oidos'), 'player')],
 				source: join('engine', 'audio-oidos.cpp'),
@@ -126,7 +127,7 @@ export async function compile(config: Config) {
 					'-i',
 					buildDirectory + sep,
 					'-i',
-					'demo' + sep,
+					demoDirectory + sep,
 					'-o',
 					obj,
 					asmSources[obj].source,

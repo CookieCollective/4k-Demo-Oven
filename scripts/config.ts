@@ -1,15 +1,29 @@
-import { Provider as Config } from 'nconf';
+import { pathExistsSync, statSync } from 'fs-extra';
+import { Provider } from 'nconf';
 import * as yaml from 'nconf-yaml';
 import { dirname, join } from 'path';
 
-export { Provider as Config } from 'nconf';
+export interface IConfig {
+	addConstant(type: string, name: string, value: string): void;
+	addGlobal(type: string, name: string, value?: string): void;
+
+	addFloatUniform(name: string): void;
+	getFloatUniforms(): string[];
+
+	getHeightUniformName(): string;
+	getWidthUniformName(): string;
+
+	preprocessShader(shader: string): string;
+
+	get(key?: string): any;
+}
 
 export interface IOptions {
 	capture: boolean;
 }
 
-export function getConfig(options: IOptions) {
-	const config: Config = new Config();
+export function getConfig(options: IOptions): IConfig {
+	const config = new Provider();
 
 	config.set('capture', options.capture);
 
@@ -21,6 +35,18 @@ export function getConfig(options: IOptions) {
 				alias: 'd',
 				default: false,
 				describe: 'Compile a debugging version.',
+				type: 'boolean',
+			},
+			directory: {
+				alias: 'dir',
+				default: 'demo',
+				describe: 'Home of your demo-specific files.',
+				type: 'string',
+			},
+			execute: {
+				alias: 'x',
+				default: false,
+				describe: 'Execute after a successful build.',
 				type: 'boolean',
 			},
 			minify: {
@@ -41,21 +67,58 @@ export function getConfig(options: IOptions) {
 				describe: 'Zip the exe after a successful build.',
 				type: 'boolean',
 			},
-		})
-		.file('local', {
-			file: 'demo/config.local.yml',
+		});
+
+	const demoDirectory = config.get('directory');
+
+	if (pathExistsSync(demoDirectory)) {
+		const stats = statSync(demoDirectory);
+		if (!stats.isDirectory()) {
+			throw new Error('Demo directory is not a directory.');
+		}
+	} else {
+		throw new Error('Demo directory does not exist.');
+	}
+
+	config
+		.file('demo-local', {
+			file: join(demoDirectory, 'config.local.yml'),
 			format: yaml,
 		})
-		.file('global', {
-			file: 'demo/config.yml',
+		.file('local', {
+			file: 'config.local.yml',
+			format: yaml,
+		})
+		.file('demo', {
+			file: join(demoDirectory, 'config.yml'),
 			format: yaml,
 		});
 
-	let demoAudioFilename = '';
+	let demoAudio = null;
 
-	switch (config.get('demo:audioTool')) {
+	switch (config.get('demo:audio:tool')) {
 		case 'oidos':
-			demoAudioFilename = 'music.xrns';
+			demoAudio = {
+				filename: 'music.xrns',
+			};
+			break;
+	}
+
+	let demoShader = null;
+
+	switch (config.get('demo:shader:tool')) {
+		case 'synthclipse':
+			demoShader = {
+				constantsPreset: 'Default',
+				filename: 'shader.stoy',
+			};
+			break;
+
+		case 'none':
+		default:
+			demoShader = {
+				filename: 'shader.frag',
+			};
 			break;
 	}
 
@@ -91,19 +154,31 @@ export function getConfig(options: IOptions) {
 			],
 		},
 		demo: {
-			audioFilename: demoAudioFilename,
-			audioTool: 'none', // or 4klang, 8klang, none, oidos, shader
+			audio: Object.assign(
+				{
+					tool: 'none', // in 4klang, 8klang, none, oidos, shader
+				},
+				demoAudio
+			),
 			closeWhenFinished: false,
-			// name
-			openGl: {
+			gl: {
 				constants: [],
 				functions: [],
 			},
+			// name
 			resolution: {
 				// height
 				// scale
 				// width
 			},
+			shader: Object.assign(
+				{
+					globals: {},
+					tool: 'none', // in none, synthclipse
+					uniforms: [],
+				},
+				demoShader
+			),
 		},
 		link: {
 			args: [
@@ -126,13 +201,6 @@ export function getConfig(options: IOptions) {
 				return join(config.get('paths:build'), 'frames');
 			},
 		},
-		shader: {
-			constantsPreset: 'Default',
-			filename: 'shader.stoy',
-			globals: {},
-			time: {},
-			uniforms: [],
-		},
 		tools: {
 			// 4klang
 			'7z': '7z',
@@ -151,10 +219,6 @@ export function getConfig(options: IOptions) {
 		'demo:name',
 		'paths:build',
 		'paths:exe',
-		'shader:constantsPreset',
-		'shader:filename',
-		'shader:globals',
-		'shader:uniforms',
 		'tools:glext',
 	]);
 
@@ -170,13 +234,13 @@ export function getConfig(options: IOptions) {
 
 	if (
 		['4klang', '8klang', 'none', 'oidos', 'shader'].indexOf(
-			config.get('demo:audioTool')
+			config.get('demo:audio:tool')
 		) === -1
 	) {
-		throw new Error('Config key "demo:audioTool" is not valid.');
+		throw new Error('Config key "demo:audio:tool" is not valid.');
 	}
 
-	switch (config.get('demo:audioTool')) {
+	switch (config.get('demo:audio:tool')) {
 		case '4klang':
 			config.required(['tools:4klang']);
 			break;
@@ -190,9 +254,131 @@ export function getConfig(options: IOptions) {
 			break;
 	}
 
+	if (['none', 'synthclipse'].indexOf(config.get('demo:shader:tool')) === -1) {
+		throw new Error('Config key "demo:shader:tool" is not valid.');
+	}
+
 	if (config.get('zip')) {
 		config.required(['tools:7z']);
 	}
 
-	return config;
+	const demoUniforms = config.get('demo:uniforms');
+
+	const constantsMap: { [name: string]: { type: string; value: string } } = {};
+	const globals = Object.assign({}, config.get('demo:globals'));
+	const uniformNames: string[] = Array.isArray(demoUniforms)
+		? demoUniforms.slice()
+		: [];
+	uniformNames.unshift('time');
+
+	function addConstant(type: string, name: string, value: string) {
+		constantsMap[name] = {
+			type,
+			value,
+		};
+	}
+
+	function addGlobal(type: string, name: string, value?: string) {
+		if (!globals[type]) {
+			globals[type] = [];
+		}
+		if (value) {
+			name += ' = ' + value;
+		}
+		globals[type].push(name);
+	}
+
+	let resolutionWidth: string;
+	let resolutionHeight: string;
+	if (config.get('capture')) {
+		resolutionWidth = config.get('capture:width');
+		resolutionHeight = config.get('capture:height');
+		addConstant('float', 'resolutionWidth', resolutionWidth);
+		addConstant('float', 'resolutionHeight', resolutionHeight);
+	} else {
+		if (
+			config.get('demo:resolution:width') > 0 &&
+			config.get('demo:resolution:height') > 0
+		) {
+			resolutionWidth = config.get('demo:resolution:width');
+			resolutionHeight = config.get('demo:resolution:height');
+			addConstant('float', 'resolutionWidth', resolutionWidth);
+			addConstant('float', 'resolutionHeight', resolutionHeight);
+		} else {
+			resolutionWidth = 'resolutionWidth';
+			resolutionHeight = 'resolutionHeight';
+			uniformNames.push(resolutionWidth, resolutionHeight);
+		}
+	}
+
+	return {
+		addConstant,
+		addGlobal,
+
+		addFloatUniform(name) {
+			uniformNames.push(name);
+		},
+
+		getFloatUniforms() {
+			return uniformNames;
+		},
+
+		getHeightUniformName() {
+			return resolutionHeight;
+		},
+
+		getWidthUniformName() {
+			return resolutionWidth;
+		},
+
+		preprocessShader(shader: string) {
+			shader = shader.replace(/\bconst\b/g, '');
+
+			Object.keys(constantsMap).forEach((constantName) => {
+				const constantEntry = constantsMap[constantName];
+
+				const re = new RegExp('\\b' + constantName + '\\b', 'g');
+				const matches = shader.match(re);
+				if (matches) {
+					if (matches.length > 1) {
+						addGlobal(
+							constantEntry.type,
+							constantName + ' = ' + constantEntry.value
+						);
+					} else {
+						shader = shader.replace(re, constantEntry.value);
+					}
+				}
+			});
+
+			shader = [
+				config.get('demo:glslVersion')
+					? '#version ' + config.get('demo:glslVersion')
+					: '// No explicit version.',
+				'uniform float _[' + uniformNames.length + '];',
+			]
+				.concat(
+					Object.keys(globals).map((type) => {
+						if (!globals[type] || globals[type].length === 0) {
+							return '';
+						}
+
+						return type + ' ' + globals[type].join(', ') + ';';
+					})
+				)
+				.concat([shader])
+				.join('\n');
+
+			uniformNames.forEach((name, index) => {
+				const re = new RegExp('\\b' + name + '\\b', 'g');
+				shader = shader.replace(re, '_[' + index + ']');
+			});
+
+			return shader;
+		},
+
+		get(key) {
+			return config.get(key);
+		},
+	};
 }

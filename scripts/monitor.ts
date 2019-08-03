@@ -2,14 +2,14 @@ import { stat } from 'fs-extra';
 import * as notifier from 'node-notifier';
 import { dirname, resolve } from 'path';
 
-import { Config } from './config';
+import { IConfig } from './config';
 import { spawn } from './lib';
 
 export class Monitor {
-	private config: Config;
+	private config: IConfig;
 	private size: number = -1;
 
-	constructor(config: Config) {
+	constructor(config: IConfig) {
 		this.config = config;
 	}
 

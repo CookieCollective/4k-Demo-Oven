@@ -2,3 +2,10 @@
 /dist/
 /node_modules/
 /dump*.dmp
+
+config.local.yml
+
+# Synthclipse
+.settings/
+.cproject
+.project

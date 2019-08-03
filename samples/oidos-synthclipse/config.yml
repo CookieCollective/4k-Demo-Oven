@@ -1,0 +1,6 @@
+demo:
+  audio:
+    tool: oidos
+  name: oidos-synthclipse
+  shader:
+    tool: synthclipse

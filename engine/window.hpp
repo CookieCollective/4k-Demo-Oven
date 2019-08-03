@@ -28,3 +28,5 @@ static const PIXELFORMATDESCRIPTOR pfd = {
 	0,
 	0,
 };
+
+static HWND hwnd;

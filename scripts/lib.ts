@@ -4,9 +4,9 @@ import {
 } from 'child_process';
 import { emptyDir } from 'fs-extra';
 
-import { Config } from './config';
+import { IConfig } from './config';
 
-export function emptyDirectories(config: Config) {
+export function emptyDirectories(config: IConfig) {
 	return Promise.all(
 		[config.get('paths:build'), config.get('paths:dist')].map((path) =>
 			emptyDir(path)

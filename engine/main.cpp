@@ -5,89 +5,10 @@
 #include <demo-data.hpp>
 #include <demo-gl.hpp>
 
+#include "definitions.hpp"
+
+#include "debug.hpp"
 #include "window.hpp"
-
-#ifdef DEBUG
-#include <iostream>
-#endif
-
-void audioStart();
-float audioGetTime();
-bool audioIsFinished();
-void captureFrame();
-
-static HWND hwnd;
-
-#ifdef DEBUG
-static void APIENTRY ShowDebugMessageFromOpenGL(
-	GLenum source,
-	GLenum type,
-	GLuint id,
-	GLenum severity,
-	GLsizei length,
-	const GLchar *message,
-	const void *userParam)
-{
-#ifdef DEBUG_MESSAGE_BOX
-	// TODO : find better. This disable fullscreen, this is the only solution I found to display message box on top...
-	SetWindowPos(
-		hwnd, NULL, 1, 0,
-		width, height,
-		SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-	MessageBox(hwnd, message, "Error", MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_SYSTEMMODAL);
-#endif
-
-	fprintf(
-		stderr,
-		"OpenGL debug message: %s type = 0x%x, severity = 0x%x, message = %s\n",
-		(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-		type,
-		severity,
-		message);
-}
-
-static void APIENTRY ShowDebugMessage(const char *message)
-{
-	fprintf(stderr, "%s\n", message);
-}
-
-//this function can be call after a GL function to check there is no error with it
-static void CheckGLError()
-{
-	GLenum err = glGetError();
-	if (err != GL_NO_ERROR)
-	{
-		char *error = nullptr;
-
-#define ERROR_CASE(ERR) \
-	case ERR:           \
-		error = #ERR;   \
-		break;
-
-		switch (err)
-		{
-			ERROR_CASE(GL_INVALID_ENUM)
-			ERROR_CASE(GL_INVALID_OPERATION)
-			ERROR_CASE(GL_INVALID_VALUE)
-			ERROR_CASE(GL_INVALID_FRAMEBUFFER_OPERATION_EXT)
-			ERROR_CASE(GL_OUT_OF_MEMORY)
-		}
-
-#undef ERROR_CASE
-
-		if (error != nullptr)
-		{
-			fprintf(stderr, "OpenGL error: %s\n", error);
-		}
-		else
-		{
-			fprintf(stderr, "OpenGL error: 0x%x\n", err);
-		}
-	}
-
-	ExitProcess(0);
-}
-#endif
 
 void main()
 {
@@ -246,8 +167,8 @@ void main()
 			//assign uniform value with hardcoded indices, use glGetUniformLocation is better but adds more line of codes
 			//uniforms can be automatically removed if not used, thus removes/offsets all the following uniforms !
 			glUniform1i(0, i);								//int : (PASSINDEX)
-			glUniform1fv(1, UNIFORM_FLOAT_COUNT, uniforms); // floats "_[UNIFORM_FLOAT_COUNT]"
-			glUniform1i(UNIFORM_FLOAT_COUNT + 1 + i, i);	// samplers b0, b1 ..
+			glUniform1fv(1, FLOAT_UNIFORM_COUNT, uniforms); // floats "_[FLOAT_UNIFORM_COUNT]"
+			glUniform1i(FLOAT_UNIFORM_COUNT + 1 + i, i);	// samplers b0, b1 ..
 
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID[i * 2 + swapped], 0);
 			glRects(-1, -1, 1, 1);
@@ -268,7 +189,7 @@ void main()
 						  GL_COLOR_BUFFER_BIT,
 						  GL_NEAREST);
 #else
-		glUniform1fv(0, UNIFORM_FLOAT_COUNT, uniforms);
+		glUniform1fv(0, FLOAT_UNIFORM_COUNT, uniforms);
 		glRects(-1, -1, 1, 1);
 #endif
 

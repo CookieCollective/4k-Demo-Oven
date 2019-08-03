@@ -1,4 +1,4 @@
-niform float time;
+uniform float time;
 uniform vec2 synth_Resolution;
 
 //! <group name="Camera"/>
@@ -18,9 +18,9 @@ uniform vec3 SphereColor1;//! color[1, 1, 1]
 
 const float TAU=6.283;
 
-// begin
+// START
 
-#define beat(time*90./60.)
+#define beat (time*90./60.)
 
 struct D
 {

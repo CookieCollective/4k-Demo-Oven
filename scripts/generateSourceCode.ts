@@ -1,33 +1,17 @@
 import { readFile, writeFile } from 'fs-extra';
 import { join } from 'path';
 
-import { Config } from './config';
+import { IConfig } from './config';
 
-export interface IOptions {
-	uniformNames: string[];
-}
-
-export async function writeDemoData(config: Config, options: IOptions) {
-	const minify: boolean = config.get('minify');
+export async function writeDemoData(config: IConfig, shader: string) {
 	const buildDirectory: string = config.get('paths:build');
 
-	const contents = await readFile(
-		join(buildDirectory, minify ? 'shader.min.glsl' : 'shader.glsl'),
-		'utf8'
-	);
-	let shader;
-
-	if (minify) {
-		const lines = contents.split('\n');
-		shader = lines[lines.length - 1];
-	} else {
-		shader = contents.replace(/\n/g, '\\n').replace(/"/g, '\\"');
-	}
+	shader = shader.replace(/\n/g, '\\n').replace(/"/g, '\\"');
 
 	const fileContents = [
 		'static const char *shaderSource = "' + shader.replace(/\r/g, '') + '";',
-		'#define UNIFORM_FLOAT_COUNT ' + options.uniformNames.length,
-		'static float uniforms[UNIFORM_FLOAT_COUNT];',
+		'#define FLOAT_UNIFORM_COUNT ' + config.getFloatUniforms().length,
+		'static float uniforms[FLOAT_UNIFORM_COUNT];',
 	];
 
 	if (config.get('debug')) {
@@ -39,14 +23,14 @@ export async function writeDemoData(config: Config, options: IOptions) {
 		fileContents.push('#define BUFFERS ' + bufferCount);
 	}
 
-	if (config.get('demo:audioTool') === 'shader') {
+	if (config.get('demo:audio:tool') === 'shader') {
 		fileContents.unshift(
 			'#include "audio-shader.cpp"',
 			'#define AUDIO_TEXTURE'
 		);
 	}
 
-	options.uniformNames.forEach((name, index) => {
+	config.getFloatUniforms().forEach((name, index) => {
 		name = name
 			.replace(/^\w|\b\w/g, (letter) => letter.toUpperCase())
 			.replace(/_+/g, '');
@@ -99,7 +83,7 @@ export async function writeDemoData(config: Config, options: IOptions) {
 	);
 }
 
-export async function writeDemoGl(config: Config) {
+export async function writeDemoGl(config: IConfig) {
 	const fileContents = [
 		'#include <GL/gl.h>',
 		'#define APIENTRYP __stdcall *',
@@ -155,8 +139,8 @@ export async function writeDemoGl(config: Config) {
 		}
 	}
 
-	addFromConfig('demo:openGl:constants', addGlConstantName);
-	addFromConfig('demo:openGl:functions', addGlFunctionName);
+	addFromConfig('demo:gl:constants', addGlConstantName);
+	addFromConfig('demo:gl:functions', addGlFunctionName);
 
 	const glextContents = await readFile(config.get('tools:glext'), 'utf8');
 

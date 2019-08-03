@@ -1,10 +1,10 @@
 import { emptyDir } from 'fs-extra';
 import { join, resolve } from 'path';
 
-import { Config } from './config';
+import { IConfig } from './config';
 import { spawn } from './lib';
 
-export async function spawnCapture(config: Config) {
+export async function spawnCapture(config: IConfig) {
 	const framesDirectory = config.get('paths:frames');
 
 	await emptyDir(framesDirectory);
@@ -14,7 +14,7 @@ export async function spawnCapture(config: Config) {
 	});
 }
 
-export async function encode(config: Config) {
+export async function encode(config: IConfig) {
 	const framesDirectory = config.get('paths:frames');
 
 	const args = [
@@ -34,7 +34,10 @@ export async function encode(config: Config) {
 	];
 
 	if (config.get('capture:audioFilename')) {
-		args.push('-i', join('demo', config.get('capture:audioFilename')));
+		args.push(
+			'-i',
+			join(config.get('directory'), config.get('capture:audioFilename'))
+		);
 	} else {
 		console.warn(
 			'capture:audioFilename has not been set, video will be silent.'
