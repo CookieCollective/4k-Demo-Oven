@@ -147,8 +147,8 @@ export async function preprocessShader(config: Config) {
 
 	let newShader = [
 		'//! FRAGMENT',
-		config.get('demo:glslversion')
-			? '#version ' + config.get('demo:glslversion')
+		config.get('demo:glslVersion')
+			? '#version ' + config.get('demo:glslVersion')
 			: '',
 		'uniform float _[' + uniformNames.length + '];',
 	]

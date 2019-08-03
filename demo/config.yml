@@ -3,7 +3,7 @@
 demo:
   audioTool: oidos
   name: template
-  glslversion: 330
+  glslVersion: 330
 shader:
   globals:
     float:
