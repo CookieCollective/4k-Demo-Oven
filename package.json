@@ -9,7 +9,6 @@
     "@types/nconf": "^0.10.0",
     "@types/node-notifier": "^5.4.0",
     "fs-extra": "^8.1.0",
-    "glsl-unit": "^0.0.7",
     "gulp": "^4.0.2",
     "gulp-cli": "^2.2.0",
     "nconf": "^0.10.0",

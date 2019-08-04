@@ -12,7 +12,6 @@ import {
 	IUniformArrays,
 } from './definitions';
 import { addConstant } from './globals';
-import { GlslUnitShaderMinifier } from './shader-minifiers/glsl-unit';
 import { ShaderMinifierShaderMinifier } from './shader-minifiers/shader-minifier';
 import { SimpleShaderProvider } from './shader-providers/simple';
 import { SynthclipseShaderProvider } from './shader-providers/synthclipse';
@@ -156,10 +155,6 @@ export function getConfig(options: IOptions): IConfig {
 
 	let shaderMinifier: IShaderMinifier;
 	switch (config.get('demo:shaderMinifier:tool') || 'shader-minifier') {
-		case 'glsl-unit':
-			shaderMinifier = new GlslUnitShaderMinifier(config);
-			break;
-
 		case 'shader-minifier':
 			shaderMinifier = new ShaderMinifierShaderMinifier(config);
 			break;
