@@ -13,16 +13,16 @@
 void main()
 {
 #ifndef FORCE_RESOLUTION
-	width = GetSystemMetrics(SM_CXSCREEN);
-	height = GetSystemMetrics(SM_CYSCREEN);
+	resolutionWidth = GetSystemMetrics(SM_CXSCREEN);
+	resolutionHeight = GetSystemMetrics(SM_CYSCREEN);
 
 #ifdef SCALE_RESOLUTION
-	width *= SCALE_RESOLUTION;
-	height *= SCALE_RESOLUTION;
+	resolutionWidth *= SCALE_RESOLUTION;
+	resolutionHeight *= SCALE_RESOLUTION;
 #endif
 #endif
 
-	hwnd = CreateWindow("static", NULL, WS_POPUP | WS_VISIBLE, 0, 0, width, height, NULL, NULL, NULL, 0);
+	hwnd = CreateWindow("static", NULL, WS_POPUP | WS_VISIBLE, 0, 0, resolutionWidth, resolutionHeight, NULL, NULL, NULL, 0);
 	auto hdc = GetDC(hwnd);
 	SetPixelFormat(hdc, ChoosePixelFormat(hdc, &pfd), &pfd);
 	wglMakeCurrent(hdc, wglCreateContext(hdc));
@@ -82,8 +82,8 @@ void main()
 	glUseProgram(program);
 
 #ifndef FORCE_RESOLUTION
-	uniformResolutionHeight = (float)height;
-	uniformResolutionWidth = (float)width;
+	uniformResolutionHeight = (float)resolutionHeight;
+	uniformResolutionWidth = (float)resolutionWidth;
 #endif
 
 #ifdef BUFFERS
@@ -189,7 +189,7 @@ void main()
 						  GL_COLOR_BUFFER_BIT,
 						  GL_NEAREST);
 #else
-		glUniform1fv(0, FLOAT_UNIFORM_COUNT, uniforms);
+		glUniform1fv(0, FLOAT_UNIFORMS_COUNT, floatUniforms);
 		glRects(-1, -1, 1, 1);
 #endif
 

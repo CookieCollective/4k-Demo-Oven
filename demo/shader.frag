@@ -1,6 +1,8 @@
 precision mediump float;
 
-uniform float time, resolutionWidth, resolutionHeight;
+uniform float time;
+uniform float resolutionWidth;
+uniform float resolutionHeight;
 
 // START
 

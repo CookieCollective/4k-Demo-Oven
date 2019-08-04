@@ -3,37 +3,19 @@ import { resolve } from 'path';
 
 import { encode as originalEncode, spawnCapture } from './capture';
 import { compile } from './compile';
-import { getConfig, IConfig } from './config';
+import { getConfig } from './config';
+import { IConfig } from './definitions';
 import { writeDemoData, writeDemoGl } from './generateSourceCode';
 import { emptyDirectories, spawn } from './lib';
-import { minify } from './minify-glslUnit';
 import { Monitor } from './monitor';
-import { preprocessShader as preprocessShaderNone } from './preprocessShader-none';
-import { preprocessShader as preprocessShaderSynthclipse } from './preprocessShader-synthclipse';
 import { zip } from './zip';
 
 async function internalBuild(config: IConfig) {
 	await emptyDirectories(config);
 
-	let shader: string;
+	const shaderDefinition = await config.provideShaderDefinition();
 
-	switch (config.get('demo:shader:tool')) {
-		case 'synthclipse':
-			shader = await preprocessShaderSynthclipse(config);
-			break;
-
-		default:
-			shader = await preprocessShaderNone(config);
-			break;
-	}
-
-	shader = config.preprocessShader(shader);
-
-	if (config.get('minify')) {
-		shader = await minify(config, shader);
-	}
-
-	await writeDemoData(config, shader);
+	await writeDemoData(config, shaderDefinition);
 
 	await writeDemoGl(config);
 
@@ -100,7 +82,11 @@ export async function showConfig() {
 }
 
 export function watch() {
-	originalWatch(['demo/**/*', 'engine/**/*'], build);
+	const config = getConfig({
+		capture: false,
+	});
+
+	originalWatch([config.get('directory') + '/**/*', 'engine/**/*'], build);
 }
 
 export default build;

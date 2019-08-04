@@ -4,7 +4,7 @@ import {
 } from 'child_process';
 import { emptyDir } from 'fs-extra';
 
-import { IConfig } from './config';
+import { IConfig } from './definitions';
 
 export function emptyDirectories(config: IConfig) {
 	return Promise.all(

@@ -2,7 +2,7 @@ import { stat } from 'fs-extra';
 import * as notifier from 'node-notifier';
 import { dirname, resolve } from 'path';
 
-import { IConfig } from './config';
+import { IConfig } from './definitions';
 import { spawn } from './lib';
 
 export class Monitor {

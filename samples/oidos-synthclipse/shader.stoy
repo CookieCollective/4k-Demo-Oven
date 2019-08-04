@@ -3,7 +3,7 @@ uniform vec2 synth_Resolution;
 
 //! <group name="Camera"/>
 uniform bool OverrideCamera;//! checkbox[false]
-#include<Camera>
+#include <Camera>
 
 //! <group name="Audio"/>
 uniform float BPM;//! slider[10, 100, 200]
@@ -18,9 +18,9 @@ uniform vec3 SphereColor1;//! color[1, 1, 1]
 
 const float TAU=6.283;
 
-// START
+const float beat = time * BPM/60.;
 
-#define beat (time*90./60.)
+// START
 
 struct D
 {

@@ -1,7 +1,7 @@
 import { pathExists, remove, stat } from 'fs-extra';
 import { join, resolve } from 'path';
 
-import { IConfig } from './config';
+import { IConfig } from './definitions';
 import { spawn } from './lib';
 
 export async function zip(config: IConfig) {

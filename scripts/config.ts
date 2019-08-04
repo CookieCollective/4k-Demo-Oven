@@ -3,20 +3,19 @@ import { Provider } from 'nconf';
 import * as yaml from 'nconf-yaml';
 import { dirname, join } from 'path';
 
-export interface IConfig {
-	addConstant(type: string, name: string, value: string): void;
-	addGlobal(type: string, name: string, value?: string): void;
-
-	addFloatUniform(name: string): void;
-	getFloatUniforms(): string[];
-
-	getHeightUniformName(): string;
-	getWidthUniformName(): string;
-
-	preprocessShader(shader: string): string;
-
-	get(key?: string): any;
-}
+import {
+	AugmentedGlobals,
+	IConfig,
+	IShaderDefinition,
+	IShaderMinifier,
+	IShaderProvider,
+	IUniformArrays,
+} from './definitions';
+import { addConstant } from './globals';
+import { GlslUnitShaderMinifier } from './shader-minifiers/glsl-unit';
+import { ShaderMinifierShaderMinifier } from './shader-minifiers/shader-minifier';
+import { SimpleShaderProvider } from './shader-providers/simple';
+import { SynthclipseShaderProvider } from './shader-providers/synthclipse';
 
 export interface IOptions {
 	capture: boolean;
@@ -94,6 +93,43 @@ export function getConfig(options: IOptions): IConfig {
 			format: yaml,
 		});
 
+	const globals: AugmentedGlobals = [];
+
+	if (config.get('capture')) {
+		config.set('forceResolution', true);
+		addConstant(
+			globals,
+			'float',
+			'resolutionWidth',
+			config.get('capture:width')
+		);
+		addConstant(
+			globals,
+			'float',
+			'resolutionHeight',
+			config.get('capture:height')
+		);
+	} else {
+		if (
+			config.get('demo:resolution:width') > 0 &&
+			config.get('demo:resolution:height') > 0
+		) {
+			config.set('forceResolution', true);
+			addConstant(
+				globals,
+				'float',
+				'resolutionWidth',
+				config.get('demo:resolution:width')
+			);
+			addConstant(
+				globals,
+				'float',
+				'resolutionHeight',
+				config.get('demo:resolution:height')
+			);
+		}
+	}
+
 	let demoAudio = null;
 
 	switch (config.get('demo:audio:tool')) {
@@ -104,22 +140,32 @@ export function getConfig(options: IOptions): IConfig {
 			break;
 	}
 
-	let demoShader = null;
+	let shaderProvider: IShaderProvider;
+	switch (config.get('demo:shaderProvider:tool') || 'simple') {
+		case 'simple':
+			shaderProvider = new SimpleShaderProvider(config);
+			break;
 
-	switch (config.get('demo:shader:tool')) {
 		case 'synthclipse':
-			demoShader = {
-				constantsPreset: 'Default',
-				filename: 'shader.stoy',
-			};
+			shaderProvider = new SynthclipseShaderProvider(config);
 			break;
 
-		case 'none':
 		default:
-			demoShader = {
-				filename: 'shader.frag',
-			};
+			throw new Error('Config key "demo:shaderProvider:tool" is not valid.');
+	}
+
+	let shaderMinifier: IShaderMinifier;
+	switch (config.get('demo:shaderMinifier:tool') || 'shader-minifier') {
+		case 'glsl-unit':
+			shaderMinifier = new GlslUnitShaderMinifier(config);
 			break;
+
+		case 'shader-minifier':
+			shaderMinifier = new ShaderMinifierShaderMinifier(config);
+			break;
+
+		default:
+			throw new Error('Config key "demo:shaderMinifier:tool" is not valid.');
 	}
 
 	if (options.capture) {
@@ -171,13 +217,13 @@ export function getConfig(options: IOptions): IConfig {
 				// scale
 				// width
 			},
-			shader: Object.assign(
+			shaderProvider: Object.assign(
 				{
 					globals: {},
 					tool: 'none', // in none, synthclipse
 					uniforms: [],
 				},
-				demoShader
+				shaderProvider.getDefaultConfig()
 			),
 		},
 		link: {
@@ -208,6 +254,7 @@ export function getConfig(options: IOptions): IConfig {
 			crinkler: 'crinkler',
 			ffmpeg: 'ffmpeg',
 			// glext
+			mono: 'mono',
 			nasm: 'nasm',
 			// oidos
 			python2: 'python',
@@ -254,100 +301,135 @@ export function getConfig(options: IOptions): IConfig {
 			break;
 	}
 
-	if (['none', 'synthclipse'].indexOf(config.get('demo:shader:tool')) === -1) {
-		throw new Error('Config key "demo:shader:tool" is not valid.');
-	}
-
 	if (config.get('zip')) {
 		config.required(['tools:7z']);
 	}
 
-	const demoUniforms = config.get('demo:uniforms');
-
-	const constantsMap: { [name: string]: { type: string; value: string } } = {};
-	const globals = Object.assign({}, config.get('demo:globals'));
-	const uniformNames: string[] = Array.isArray(demoUniforms)
-		? demoUniforms.slice()
-		: [];
-	uniformNames.unshift('time');
-
-	function addConstant(type: string, name: string, value: string) {
-		constantsMap[name] = {
-			type,
-			value,
-		};
-	}
-
-	function addGlobal(type: string, name: string, value?: string) {
-		if (!globals[type]) {
-			globals[type] = [];
-		}
-		if (value) {
-			name += ' = ' + value;
-		}
-		globals[type].push(name);
-	}
-
-	let resolutionWidth: string;
-	let resolutionHeight: string;
-	if (config.get('capture')) {
-		resolutionWidth = config.get('capture:width');
-		resolutionHeight = config.get('capture:height');
-		addConstant('float', 'resolutionWidth', resolutionWidth);
-		addConstant('float', 'resolutionHeight', resolutionHeight);
-	} else {
-		if (
-			config.get('demo:resolution:width') > 0 &&
-			config.get('demo:resolution:height') > 0
-		) {
-			resolutionWidth = config.get('demo:resolution:width');
-			resolutionHeight = config.get('demo:resolution:height');
-			addConstant('float', 'resolutionWidth', resolutionWidth);
-			addConstant('float', 'resolutionHeight', resolutionHeight);
-		} else {
-			resolutionWidth = 'resolutionWidth';
-			resolutionHeight = 'resolutionHeight';
-			uniformNames.push(resolutionWidth, resolutionHeight);
-		}
-	}
-
 	return {
-		addConstant,
-		addGlobal,
+		async provideShaderDefinition() {
+			let shader = await shaderProvider.provide(globals);
 
-		addFloatUniform(name) {
-			uniformNames.push(name);
-		},
+			globals.forEach((global) => {
+				global.referencedByGlobals = [];
+				global.referencesToGlobals = [];
+				global.active = true;
+			});
 
-		getFloatUniforms() {
-			return uniformNames;
-		},
+			// Find reference graph in constants.
+			globals.forEach((global) => {
+				const usageRegExp = new RegExp(`\\b${global.name}\\b`, 'g');
 
-		getHeightUniformName() {
-			return resolutionHeight;
-		},
-
-		getWidthUniformName() {
-			return resolutionWidth;
-		},
-
-		preprocessShader(shader: string) {
-			shader = shader.replace(/\bconst\b/g, '');
-
-			Object.keys(constantsMap).forEach((constantName) => {
-				const constantEntry = constantsMap[constantName];
-
-				const re = new RegExp('\\b' + constantName + '\\b', 'g');
-				const matches = shader.match(re);
-				if (matches) {
-					if (matches.length > 1) {
-						addGlobal(
-							constantEntry.type,
-							constantName + ' = ' + constantEntry.value
-						);
-					} else {
-						shader = shader.replace(re, constantEntry.value);
+				globals.forEach((otherGlobal) => {
+					if (otherGlobal.value && usageRegExp.test(otherGlobal.value)) {
+						otherGlobal.referencesToGlobals.push(global);
+						global.referencedByGlobals.push(otherGlobal);
 					}
+				});
+
+				const shaderMatches = shader.match(usageRegExp);
+				global.referencedInShader = shaderMatches
+					? shaderMatches.length > 0
+					: false;
+			});
+
+			// Replace constants by their value.
+			const queue = globals.slice();
+			while (queue.length > 0) {
+				const global = queue.shift();
+				if (global && global.active) {
+					if (
+						global.value &&
+						global.referencesToGlobals.length === 0 &&
+						!global.annotations.noreplace
+					) {
+						const value = global.value;
+
+						console.log(
+							`Replacing references to constant "${global.name}" by its value.`
+						);
+
+						const usageRegExp = new RegExp(`\\b${global.name}\\b`, 'g');
+
+						if (global.referencedInShader) {
+							shader = shader.replace(usageRegExp, value);
+							global.referencedInShader = false;
+						}
+
+						global.referencedByGlobals.forEach((otherGlobal) => {
+							otherGlobal.value = otherGlobal.value!.replace(
+								usageRegExp,
+								value
+							);
+
+							const index = otherGlobal.referencesToGlobals.indexOf(global);
+							otherGlobal.referencesToGlobals.splice(index, 1);
+
+							queue.push(otherGlobal);
+						});
+						global.referencedByGlobals = [];
+
+						global.active = false;
+					}
+				}
+			}
+
+			// Deactivate unreferenced variables.
+			globals.forEach((global) => {
+				if (
+					global.active &&
+					!global.referencedInShader &&
+					global.referencedByGlobals.length === 0
+				) {
+					console.log(
+						`Global variable "${global.name}" is not referenced and won't be used.`
+					);
+					global.active = false;
+				}
+			});
+
+			const globalsByTypes: { [type: string]: string[] } = {};
+			const uniformArrays: IUniformArrays = {};
+
+			globals.forEach((global) => {
+				if (!global.active) {
+					return;
+				}
+
+				if (global.annotations.uniform) {
+					if (!uniformArrays[global.type]) {
+						uniformArrays[global.type] = {
+							globals: [],
+							name: global.type + 'Uniforms',
+						};
+					}
+
+					const index = uniformArrays[global.type].globals.length;
+					uniformArrays[global.type].globals.push(global);
+
+					const usageRegExp = new RegExp(`\\b${global.name}\\b`, 'g');
+					const newWriting =
+						uniformArrays[global.type].name + '[' + index + ']';
+
+					if (global.referencedInShader) {
+						shader = shader.replace(usageRegExp, newWriting);
+					}
+
+					global.referencedByGlobals.forEach((otherGlobal) => {
+						otherGlobal.value = otherGlobal.value!.replace(
+							usageRegExp,
+							newWriting
+						);
+					});
+				} else {
+					if (!globalsByTypes[global.type]) {
+						globalsByTypes[global.type] = [];
+					}
+
+					let str = global.name;
+					if (global.value) {
+						str += ' = ' + global.value;
+					}
+					globalsByTypes[global.type].push(str);
 				}
 			});
 
@@ -355,26 +437,33 @@ export function getConfig(options: IOptions): IConfig {
 				config.get('demo:glslVersion')
 					? '#version ' + config.get('demo:glslVersion')
 					: '// No explicit version.',
-				'uniform float _[' + uniformNames.length + '];',
 			]
 				.concat(
-					Object.keys(globals).map((type) => {
-						if (!globals[type] || globals[type].length === 0) {
-							return '';
-						}
-
-						return type + ' ' + globals[type].join(', ') + ';';
+					Object.keys(uniformArrays).map(
+						(type) =>
+							`uniform ${type} ${uniformArrays[type].name}[${uniformArrays[type].globals.length}];`
+					)
+				)
+				.concat(
+					Object.keys(globalsByTypes).map((type) => {
+						return type + ' ' + globalsByTypes[type].join(', ') + ';';
 					})
 				)
 				.concat([shader])
 				.join('\n');
 
-			uniformNames.forEach((name, index) => {
-				const re = new RegExp('\\b' + name + '\\b', 'g');
-				shader = shader.replace(re, '_[' + index + ']');
-			});
+			let definition: Readonly<IShaderDefinition> = {
+				globals,
+				passMainFunctionNames: config.get('demo:passes'),
+				shader,
+				uniformArrays,
+			};
 
-			return shader;
+			if (config.get('minify')) {
+				definition = await shaderMinifier.minify(definition);
+			}
+
+			return definition;
 		},
 
 		get(key) {

@@ -1,18 +1,35 @@
 import { readFile, writeFile } from 'fs-extra';
 import { join } from 'path';
 
-import { IConfig } from './config';
+import { IConfig, IShaderDefinition } from './definitions';
 
-export async function writeDemoData(config: IConfig, shader: string) {
+export async function writeDemoData(
+	config: IConfig,
+	definition: IShaderDefinition
+) {
 	const buildDirectory: string = config.get('paths:build');
 
-	shader = shader.replace(/\n/g, '\\n').replace(/"/g, '\\"');
+	const shader = definition.shader
+		.replace(/\n/g, '\\n')
+		.replace(/"/g, '\\"')
+		.replace(/\r/g, '');
 
-	const fileContents = [
-		'static const char *shaderSource = "' + shader.replace(/\r/g, '') + '";',
-		'#define FLOAT_UNIFORM_COUNT ' + config.getFloatUniforms().length,
-		'static float uniforms[FLOAT_UNIFORM_COUNT];',
-	];
+	const fileContents = [`static const char *shaderSource = "${shader}";`];
+
+	Object.keys(definition.uniformArrays).forEach((type) => {
+		const macroName = `${type.toUpperCase()}_UNIFORMS_COUNT`;
+		const arrayName = `${type}Uniforms`;
+		fileContents.push(
+			`#define ${macroName} ${definition.uniformArrays[type].globals.length}`,
+			`static ${type} ${arrayName}[${macroName}];`
+		);
+		definition.uniformArrays[type].globals.forEach((global, index) => {
+			const name = global.name
+				.replace(/^\w|\b\w/g, (letter) => letter.toUpperCase())
+				.replace(/_+/g, '');
+			fileContents.push(`#define uniform${name} ${arrayName}[${index}]`);
+		});
+	});
 
 	if (config.get('debug')) {
 		fileContents.push('#define DEBUG');
@@ -30,20 +47,15 @@ export async function writeDemoData(config: IConfig, shader: string) {
 		);
 	}
 
-	config.getFloatUniforms().forEach((name, index) => {
-		name = name
-			.replace(/^\w|\b\w/g, (letter) => letter.toUpperCase())
-			.replace(/_+/g, '');
-		fileContents.push('#define uniform' + name + ' uniforms[' + index + ']');
-	});
-
 	if (config.get('capture')) {
 		fileContents.push(
 			'#define CAPTURE',
 			'#define CAPTURE_FPS ' + config.get('capture:fps'),
 			'#define FORCE_RESOLUTION',
-			'static const constexpr int width = ' + config.get('capture:width') + ';',
-			'static const constexpr int height = ' +
+			'static const constexpr int resolutionWidth = ' +
+				config.get('capture:width') +
+				';',
+			'static const constexpr int resolutionHeight = ' +
 				config.get('capture:height') +
 				';'
 		);
@@ -56,15 +68,15 @@ export async function writeDemoData(config: IConfig, shader: string) {
 		) {
 			fileContents.push(
 				'#define FORCE_RESOLUTION',
-				'static const constexpr int width = ' +
+				'static const constexpr int resolutionWidth = ' +
 					config.get('demo:resolution:width') +
 					';',
-				'static const constexpr int height = ' +
+				'static const constexpr int resolutionHeight = ' +
 					config.get('demo:resolution:height') +
 					';'
 			);
 		} else {
-			fileContents.push('static int width, height;');
+			fileContents.push('static int resolutionWidth, resolutionHeight;');
 		}
 
 		const scale = config.get('demo:resolution:scale');
@@ -134,7 +146,7 @@ export async function writeDemoGl(config: IConfig) {
 
 	function addFromConfig(key: string, action: (name: string) => void) {
 		const value = config.get(key);
-		if (value && value.forEach) {
+		if (Array.isArray(value)) {
 			value.forEach(action);
 		}
 	}

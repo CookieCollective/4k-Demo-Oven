@@ -1,6 +1,6 @@
 import { join, sep } from 'path';
 
-import { IConfig } from './config';
+import { IConfig } from './definitions';
 import { spawn } from './lib';
 
 interface ISource {
