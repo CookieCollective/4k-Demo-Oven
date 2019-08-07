@@ -125,7 +125,7 @@ export async function writeDemoData(
 		);
 	}
 
-	fileContents.push('#define PASSES ' + definition.passes.length);
+	fileContents.push('#define PASS_COUNT ' + definition.passes.length);
 
 	fileContents.push('static const char *shaderPassCodes[] = {');
 	definition.passes.forEach((pass, index) => {

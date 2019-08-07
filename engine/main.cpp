@@ -73,7 +73,7 @@ void main()
 		*/
 #endif
 
-#if PASSES == 1
+#if PASS_COUNT == 1
 	GLint program = glCreateProgram();
 	checkGLError();
 
@@ -132,9 +132,9 @@ void main()
 	checkGLError();
 
 #else
-	GLint programs[PASSES];
+	GLint programs[PASS_COUNT];
 
-	for (auto i = 0; i < PASSES; ++i)
+	for (auto i = 0; i < PASS_COUNT; ++i)
 	{
 		programs[i] = glCreateProgram();
 		checkGLError();
@@ -200,38 +200,8 @@ void main()
 	}
 #endif
 
-#if defined(AUDIO_TEXTURE) || defined(BUFFERS)
-	unsigned int fbo;
-	glGenFramebuffers(1, &fbo);
-#endif
-
 #ifdef HOOK_INITIALIZE
 	HOOK_INITIALIZE
-#endif
-
-#ifdef AUDIO_TEXTURE
-	glViewport(0, 0, SOUND_TEXTURE_SIZE, SOUND_TEXTURE_SIZE);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glUniform1i(0, -1); //int : (PASSINDEX)
-
-	glBindTexture(GL_TEXTURE_2D, 1234);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, SOUND_TEXTURE_SIZE, SOUND_TEXTURE_SIZE, 0, GL_RGBA, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 1234, 0);
-
-	glRects(-1, -1, 1, 1);
-
-	glReadPixels(0, 0, SOUND_TEXTURE_SIZE, SOUND_TEXTURE_SIZE, GL_RGBA, GL_FLOAT, soundBuffer);
-	glViewport(0, 0, resolutionWidth, resolutionHeight);
-	glFinish();
-
-#ifdef DEBUG
-	printf("Sound samples:\n");
-	for (int i = 0; i < 10; i++)
-	{
-		printf("Sound sample %05d: %f / %f\n", i, soundBuffer[i * 2], soundBuffer[i * 2 + 1]);
-	}
-#endif
 #endif
 
 	audioStart();
@@ -243,40 +213,8 @@ void main()
 
 		float time = audioGetTime();
 
-		// Set uniforms here.
+#ifdef uniformTime
 		uniformTime = time;
-
-		// Assume that the uniforms u[] will always be linked to locations [0-n].
-		// Given that they are the only uniforms in the shader, it is likely to work on all drivers.
-#ifdef BUFFERS
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-		for (auto i = 0; i < BUFFERS; i++)
-		{
-			//assign uniform value with hardcoded indices, use glGetUniformLocation is better but adds more line of codes
-			//uniforms can be automatically removed if not used, thus removes/offsets all the following uniforms !
-			glUniform1i(0, i);								//int : (PASSINDEX)
-			glUniform1fv(1, FLOAT_UNIFORM_COUNT, uniforms); // floats "_[FLOAT_UNIFORM_COUNT]"
-			glUniform1i(FLOAT_UNIFORM_COUNT + 1 + i, i);	// samplers b0, b1 ..
-
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID[i * 2 + swapped], 0);
-			glRects(-1, -1, 1, 1);
-
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, textureID[i * 2 + swapped]);
-		}
-
-		swapped = !swapped;
-
-		//blit last buffer (fbo) to the displayed frame buffer (0)
-		//TODO : Blit can cost performances, better render the last buffer directly to the displayed framebuffer (0) ?
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glDrawBuffer(GL_BACK);
-
-		glBlitFramebuffer(0, 0, width, height,
-						  0, 0, width, height,
-						  GL_COLOR_BUFFER_BIT,
-						  GL_NEAREST);
 #endif
 
 #ifdef HOOK_RENDER
