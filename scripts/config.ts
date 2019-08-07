@@ -207,7 +207,6 @@ export function getConfig(options: IOptions): IConfig {
 			},
 			hooks: {
 				declarations: 'declarations.cpp',
-				directory: 'hooks',
 				initialize: 'initialize.cpp',
 				render: 'render.cpp',
 			},

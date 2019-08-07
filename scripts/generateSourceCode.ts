@@ -205,11 +205,7 @@ export async function writeDemoData(
 	async function addHook(name: string) {
 		try {
 			const hook = (await readFile(
-				join(
-					config.get('directory'),
-					config.get('demo:hooks:directory'),
-					config.get('demo:hooks:' + name)
-				),
+				join(config.get('directory'), config.get('demo:hooks:' + name)),
 				'utf8'
 			))
 				.replace(/\r/g, '')
