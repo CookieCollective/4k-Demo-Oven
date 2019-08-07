@@ -41,8 +41,9 @@ void main()
 	wglMakeCurrent(hdc, wglCreateContext(hdc));
 	ShowCursor(FALSE);
 
-	// Display a black screen while loading.
+#ifdef LOADING_BLACK_SCREEN
 	wglSwapLayerBuffers(hdc, WGL_SWAP_MAIN_PLANE);
+#endif
 
 	for (auto i = 0; i < GL_EXT_FUNCTION_COUNT; ++i)
 	{

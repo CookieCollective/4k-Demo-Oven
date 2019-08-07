@@ -198,6 +198,10 @@ export async function writeDemoData(
 		fileContents.push('#define CLOSE_WHEN_FINISHED', '');
 	}
 
+	if (config.get('demo:loadingBlackScreen')) {
+		fileContents.push('#define LOADING_BLACK_SCREEN', '');
+	}
+
 	async function addHook(name: string) {
 		try {
 			const hook = (await readFile(

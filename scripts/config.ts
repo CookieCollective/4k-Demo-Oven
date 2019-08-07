@@ -211,6 +211,7 @@ export function getConfig(options: IOptions): IConfig {
 				initialize: 'initialize.cpp',
 				render: 'render.cpp',
 			},
+			loadingBlackScreen: false,
 			// name
 			resolution: {
 				// height
