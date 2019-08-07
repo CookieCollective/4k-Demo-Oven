@@ -2,6 +2,10 @@
 precision mediump float;
 
 uniform float time;
+uniform float resolutionWidth;
+uniform float resolutionHeight;
+
+uniform sampler2D firstPassTexture;
 
 const float PI = 3.14;//! replace
 
@@ -55,4 +59,11 @@ void mainF0() {
 	float fade = smoothstep(0.0, 0.5, vColor.x);
 	fade *= (1.0 - abs(vColor.x * 2.0 - 1.0));
 	color = vec4(1, 1, 1, fade);
+}
+
+#pragma fragment 1
+
+void mainF1() {
+	vec2 uv = gl_FragCoord.xy / vec2(resolutionWidth, resolutionHeight);
+	color = 1.0 - texture(firstPassTexture, uv);
 }

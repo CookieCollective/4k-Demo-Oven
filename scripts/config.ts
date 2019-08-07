@@ -205,7 +205,12 @@ export function getConfig(options: IOptions): IConfig {
 				constants: [],
 				functions: [],
 			},
-			// hooksFilename,
+			hooks: {
+				declarations: 'declarations.cpp',
+				directory: 'hooks',
+				initialize: 'initialize.cpp',
+				render: 'render.cpp',
+			},
 			// name
 			resolution: {
 				// height

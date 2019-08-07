@@ -1,4 +1,4 @@
-import { copy, readFile, writeFile } from 'fs-extra';
+import { readFile, writeFile } from 'fs-extra';
 import { join } from 'path';
 
 import { IConfig, IShaderDefinition } from './definitions';
@@ -23,21 +23,40 @@ export async function writeDemoData(
 		fileContents.push('#define DEBUG', '');
 	}
 
+	let debugDisplayUniformLocations = '';
+
 	Object.keys(definition.uniformArrays).forEach((type) => {
-		const macroName = `${type.toUpperCase()}_UNIFORM_COUNT`;
+		const uniformArray = definition.uniformArrays[type];
+
+		const typeUpperCase = type.toUpperCase();
+		const nameMacro = `${typeUpperCase}_UNIFORM_NAME`;
+		const countMacro = `${typeUpperCase}_UNIFORM_COUNT`;
 		const arrayName = `${type}Uniforms`;
+		const cppType = type.startsWith('sampler') ? 'int' : type;
+
 		fileContents.push(
-			`#define ${macroName} ${definition.uniformArrays[type].variables.length}`,
-			`static ${type} ${arrayName}[${macroName}];`
+			`#define ${nameMacro} "${uniformArray.minifiedName ||
+				uniformArray.name}"`,
+			`#define ${countMacro} ${uniformArray.variables.length}`,
+			`static ${cppType} ${arrayName}[${countMacro}];`
 		);
-		definition.uniformArrays[type].variables.forEach((variable, index) => {
+
+		uniformArray.variables.forEach((variable, index) => {
 			const name = variable.name
 				.replace(/^\w|\b\w/g, (letter) => letter.toUpperCase())
 				.replace(/_+/g, '');
 			fileContents.push(`#define uniform${name} ${arrayName}[${index}]`);
 		});
+
 		fileContents.push('');
+
+		debugDisplayUniformLocations += `printf("%s: %ld\\n", "${type}", glGetUniformLocation(PROGRAM, ${nameMacro})); \\\n`;
 	});
+
+	fileContents.push(
+		'#define DEBUG_DISPLAY_UNIFORM_LOATIONS(PROGRAM) \\',
+		debugDisplayUniformLocations
+	);
 
 	let prologCode = definition.prologCode;
 	let commonCode = definition.commonCode;
@@ -130,11 +149,6 @@ export async function writeDemoData(
 	});
 	fileContents.push('};', '');
 
-	const bufferCount = config.get('demo:bufferCount');
-	if (bufferCount && bufferCount > 0) {
-		fileContents.push('#define BUFFER_COUNT ' + bufferCount);
-	}
-
 	if (config.get('demo:audio:tool') === 'shader') {
 		fileContents.unshift(
 			'#include "audio-shader.cpp"',
@@ -184,9 +198,30 @@ export async function writeDemoData(
 		fileContents.push('#define CLOSE_WHEN_FINISHED', '');
 	}
 
-	if (config.get('demo:hooksFilename')) {
-		fileContents.push('#define HAS_HOOKS', '');
+	async function addHook(name: string) {
+		try {
+			const hook = (await readFile(
+				join(
+					config.get('directory'),
+					config.get('demo:hooks:directory'),
+					config.get('demo:hooks:' + name)
+				),
+				'utf8'
+			))
+				.replace(/\r/g, '')
+				.replace(/\s*\/\/.*$/gm, '')
+				.replace(/$/gm, ' \\');
+			fileContents.push(`#define HOOK_${name.toUpperCase()} \\`, hook, '');
+		} catch (err) {
+			if (err.code !== 'ENOENT') {
+				throw err;
+			}
+		}
 	}
+
+	await addHook('declarations');
+	await addHook('initialize');
+	await addHook('render');
 
 	await writeFile(
 		join(buildDirectory, 'demo-data.hpp'),
@@ -302,14 +337,4 @@ export async function writeDemoGl(config: IConfig) {
 	const buildDirectory: string = config.get('paths:build');
 
 	await writeFile(join(buildDirectory, 'demo-gl.hpp'), fileContents.join('\n'));
-}
-
-export async function copyHooks(config: IConfig) {
-	const hooksFilename = config.get('demo:hooksFilename');
-	if (hooksFilename) {
-		const src = join(config.get('directory'), hooksFilename);
-		const dest = join(config.get('paths:build'), 'hooks.hpp');
-
-		await copy(src, dest);
-	}
 }

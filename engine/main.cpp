@@ -10,8 +10,8 @@
 #include "debug.hpp"
 #include "window.hpp"
 
-#ifdef HAS_HOOKS
-#include <hooks.hpp>
+#ifdef HOOK_DECLARATIONS
+HOOK_DECLARATIONS
 #endif
 
 void main()
@@ -55,8 +55,10 @@ void main()
 	// Display Opengl info in console.
 	printf("OpenGL version: %s\n", (char *)glGetString(GL_VERSION));
 	// printf("OpenGL extensions: %s\n\n", (char *)glGetString(GL_EXTENSIONS));
+	printf("\n");
 
 	//TODO : here we set a callback function for GL to use when an error is encountered. Does not seem to work !
+	/*
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(showDebugMessageFromOpenGL, NULL);
@@ -67,10 +69,12 @@ void main()
 		0,
 		0,
 		true);
+		*/
 #endif
 
 #if PASSES == 1
 	GLint program = glCreateProgram();
+	checkGLError();
 
 #ifdef HAS_SHADER_PASS_0_VERTEX_CODE
 	const char *vertexShaderSources[] = {
@@ -115,35 +119,84 @@ void main()
 #endif
 
 	glLinkProgram(program);
+	checkGLError();
+
+#ifdef DEBUG
+	printf("Uniform locations:\n");
+	DEBUG_DISPLAY_UNIFORM_LOATIONS(program);
+	printf("\n");
+#endif
+
 	glUseProgram(program);
+	checkGLError();
 
 #else
-#error Not implemented.
+	GLint programs[PASSES];
 
-#endif
-
-#ifdef HAS_HOOKS
-	initialization();
-#endif
-
-#ifdef BUFFERS
-	//As we use 2 textures for each buffer for each buffer, "swapped" will tell which texture to render, changes at each frame
-	//dualbuffering prevents reading and writing to the same render target
-	bool swapped = false; //initilization costs 13 byte :(
-
-	//Here we create textures, you can change the size of textures, filtering, add mipmaps, to suit your need
-	GLuint textureID[BUFFERS * 2];
-	glGenTextures(BUFFERS * 2, textureID);
-
-	for (int i = 0; i < BUFFERS * 2; i++)
+	for (auto i = 0; i < PASSES; ++i)
 	{
-		glBindTexture(GL_TEXTURE_2D, textureID[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
+		programs[i] = glCreateProgram();
+		checkGLError();
 
-	//Only one framebuffer to save line of codes, we change the render targets for each buffer in the rendering loop
+		if (shaderPassCodes[i * 2])
+		{
+			const char *vertexShaderSources[] = {
+#ifdef HAS_SHADER_PROLOG_CODE
+				shaderPrologCode,
+#endif
+#ifdef HAS_SHADER_VERTEX_SPECIFIC_CODE
+				shaderVertexSpecificCode,
+#endif
+#ifdef HAS_SHADER_COMMON_CODE
+				shaderCommonCode,
+#endif
+				shaderPassCodes[i * 2],
+			};
+
+			GLint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+			checkGLError();
+			glShaderSource(vertexShader, sizeof(vertexShaderSources) / sizeof(vertexShaderSources[0]), vertexShaderSources, 0);
+			checkGLError();
+			glCompileShader(vertexShader);
+			checkShaderCompilation(vertexShader);
+			glAttachShader(programs[i], vertexShader);
+			checkGLError();
+		}
+
+		if (shaderPassCodes[i * 2 + 1])
+		{
+			const char *fragmentShaderSources[] = {
+#ifdef HAS_SHADER_PROLOG_CODE
+				shaderPrologCode,
+#endif
+#ifdef HAS_SHADER_FRAGMENT_SPECIFIC_CODE
+				shaderFragmentSpecificCode,
+#endif
+#ifdef HAS_SHADER_COMMON_CODE
+				shaderCommonCode,
+#endif
+				shaderPassCodes[i * 2 + 1],
+			};
+
+			GLint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+			checkGLError();
+			glShaderSource(fragmentShader, sizeof(fragmentShaderSources) / sizeof(fragmentShaderSources[0]), fragmentShaderSources, 0);
+			checkGLError();
+			glCompileShader(fragmentShader);
+			checkShaderCompilation(fragmentShader);
+			glAttachShader(programs[i], fragmentShader);
+			checkGLError();
+		}
+
+		glLinkProgram(programs[i]);
+		checkGLError();
+
+#ifdef DEBUG
+		printf("Uniform locations in pass %d:\n", i);
+		DEBUG_DISPLAY_UNIFORM_LOATIONS(programs[i]);
+		printf("\n");
+#endif
+	}
 #endif
 
 #if defined(AUDIO_TEXTURE) || defined(BUFFERS)
@@ -151,13 +204,8 @@ void main()
 	glGenFramebuffers(1, &fbo);
 #endif
 
-#ifdef DEBUG
-	//this displays the indices for each uniform, it helps if you want to hardcode indices in the render loop to save line of code for release version
-	printf("uniform id for _ : %ld\n", glGetUniformLocation(program, "_"));
-	printf("uniform id for PASSINDEX : %ld\n", glGetUniformLocation(program, "PASSINDEX"));
-	printf("uniform id for b0 : %ld\n", glGetUniformLocation(program, "b0"));
-	printf("uniform id for b1 : %ld\n", glGetUniformLocation(program, "b1"));
-	printf("uniform id for b2 : %ld\n", glGetUniformLocation(program, "b2"));
+#ifdef HOOK_INITIALIZE
+	HOOK_INITIALIZE
 #endif
 
 #ifdef AUDIO_TEXTURE
@@ -228,14 +276,16 @@ void main()
 						  0, 0, width, height,
 						  GL_COLOR_BUFFER_BIT,
 						  GL_NEAREST);
-#else
-		glUniform1fv(0, FLOAT_UNIFORM_COUNT, floatUniforms);
 #endif
 
-#ifdef HAS_HOOKS
-		render();
+#ifdef HOOK_RENDER
+		HOOK_RENDER
 #else
+		glUniform1fv(0, FLOAT_UNIFORM_COUNT, floatUniforms);
+		checkGLError();
+
 		glRects(-1, -1, 1, 1);
+		checkGLError();
 #endif
 
 		captureFrame();

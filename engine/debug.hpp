@@ -41,7 +41,7 @@ static void APIENTRY showDebugMessage(const char *message)
 }
 
 //this function can be call after a GL function to check there is no error with it
-static void checkGLError()
+static void _checkGLError(const char *filename, int lineNumber)
 {
 	GLenum err = glGetError();
 	if (err != GL_NO_ERROR)
@@ -66,16 +66,18 @@ static void checkGLError()
 
 		if (error != nullptr)
 		{
-			fprintf(stderr, "OpenGL error: %s\n", error);
+			fprintf(stderr, "OpenGL error at %s:%d: %s\n", filename, lineNumber, error);
 		}
 		else
 		{
-			fprintf(stderr, "OpenGL error: 0x%x\n", err);
+			fprintf(stderr, "OpenGL error at %s:%d: 0x%x\n", filename, lineNumber, err);
 		}
 	}
 
-	ExitProcess(0);
+	// ExitProcess(1);
 }
+
+#define checkGLError() _checkGLError(__FILE__, __LINE__)
 
 static void checkShaderCompilation(GLint shader)
 {
@@ -88,6 +90,7 @@ static void checkShaderCompilation(GLint shader)
 
 #else
 
+#define checkGLError()
 #define checkShaderCompilation(shader)
 
 #endif
