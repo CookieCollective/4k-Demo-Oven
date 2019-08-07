@@ -4,17 +4,16 @@ import * as yaml from 'nconf-yaml';
 import { dirname, join } from 'path';
 
 import {
-	AugmentedGlobals,
 	IConfig,
 	IShaderDefinition,
 	IShaderMinifier,
 	IShaderProvider,
-	IUniformArrays,
+	Variable,
 } from './definitions';
-import { addConstant } from './globals';
 import { ShaderMinifierShaderMinifier } from './shader-minifiers/shader-minifier';
 import { SimpleShaderProvider } from './shader-providers/simple';
 import { SynthclipseShaderProvider } from './shader-providers/synthclipse';
+import { addConstant } from './variables';
 
 export interface IOptions {
 	capture: boolean;
@@ -92,18 +91,18 @@ export function getConfig(options: IOptions): IConfig {
 			format: yaml,
 		});
 
-	const globals: AugmentedGlobals = [];
+	const variables: Variable[] = [];
 
 	if (config.get('capture')) {
 		config.set('forceResolution', true);
 		addConstant(
-			globals,
+			variables,
 			'float',
 			'resolutionWidth',
 			config.get('capture:width')
 		);
 		addConstant(
-			globals,
+			variables,
 			'float',
 			'resolutionHeight',
 			config.get('capture:height')
@@ -115,13 +114,13 @@ export function getConfig(options: IOptions): IConfig {
 		) {
 			config.set('forceResolution', true);
 			addConstant(
-				globals,
+				variables,
 				'float',
 				'resolutionWidth',
 				config.get('demo:resolution:width')
 			);
 			addConstant(
-				globals,
+				variables,
 				'float',
 				'resolutionHeight',
 				config.get('demo:resolution:height')
@@ -206,6 +205,7 @@ export function getConfig(options: IOptions): IConfig {
 				constants: [],
 				functions: [],
 			},
+			// hooksFilename,
 			// name
 			resolution: {
 				// height
@@ -214,9 +214,7 @@ export function getConfig(options: IOptions): IConfig {
 			},
 			shaderProvider: Object.assign(
 				{
-					globals: {},
 					tool: 'none', // in none, synthclipse
-					uniforms: [],
 				},
 				shaderProvider.getDefaultConfig()
 			),
@@ -302,161 +300,177 @@ export function getConfig(options: IOptions): IConfig {
 
 	return {
 		async provideShaderDefinition() {
-			let shader = await shaderProvider.provide(globals);
+			const definition: IShaderDefinition = {
+				commonCode: '',
+				passes: [],
+				uniformArrays: {},
+				variables,
+			};
 
-			globals.forEach((global) => {
-				global.referencedByGlobals = [];
-				global.referencesToGlobals = [];
-				global.active = true;
-			});
+			await shaderProvider.provide(definition);
 
-			// Find reference graph in constants.
-			globals.forEach((global) => {
-				const usageRegExp = new RegExp(`\\b${global.name}\\b`, 'g');
-
-				globals.forEach((otherGlobal) => {
-					if (otherGlobal.value && usageRegExp.test(otherGlobal.value)) {
-						otherGlobal.referencesToGlobals.push(global);
-						global.referencedByGlobals.push(otherGlobal);
-					}
-				});
-
-				const shaderMatches = shader.match(usageRegExp);
-				global.referencedInShader = shaderMatches
-					? shaderMatches.length > 0
-					: false;
-			});
-
-			// Replace constants by their value.
-			const queue = globals.slice();
-			while (queue.length > 0) {
-				const global = queue.shift();
-				if (global && global.active) {
-					if (
-						global.value &&
-						global.referencesToGlobals.length === 0 &&
-						!global.annotations.noreplace
-					) {
-						const value = global.value;
-
-						console.log(
-							`Replacing references to constant "${global.name}" by its value.`
-						);
-
-						const usageRegExp = new RegExp(`\\b${global.name}\\b`, 'g');
-
-						if (global.referencedInShader) {
-							shader = shader.replace(usageRegExp, value);
-							global.referencedInShader = false;
-						}
-
-						global.referencedByGlobals.forEach((otherGlobal) => {
-							otherGlobal.value = otherGlobal.value!.replace(
-								usageRegExp,
-								value
-							);
-
-							const index = otherGlobal.referencesToGlobals.indexOf(global);
-							otherGlobal.referencesToGlobals.splice(index, 1);
-
-							queue.push(otherGlobal);
-						});
-						global.referencedByGlobals = [];
-
-						global.active = false;
-					}
-				}
+			if (definition.passes.length === 0) {
+				throw new Error('Shader should define at least one pass.');
 			}
 
+			// Replace constants by their value.
 			// Deactivate unreferenced variables.
-			globals.forEach((global) => {
-				if (
-					global.active &&
-					!global.referencedInShader &&
-					global.referencedByGlobals.length === 0
-				) {
-					console.log(
-						`Global variable "${global.name}" is not referenced and won't be used.`
-					);
-					global.active = false;
+			variables.forEach((variable) => {
+				if (variable.active) {
+					const usageRegExp = new RegExp(`\\b${variable.name}\\b`, 'g');
+
+					if (variable.kind === 'const') {
+						console.log(
+							`Replacing references to constant "${variable.name}" by its value "${variable.value}".`
+						);
+
+						if (definition.prologCode) {
+							definition.prologCode = definition.prologCode.replace(
+								usageRegExp,
+								variable.value
+							);
+						}
+
+						definition.commonCode = definition.commonCode.replace(
+							usageRegExp,
+							variable.value
+						);
+
+						definition.passes.forEach((pass) => {
+							if (pass.vertexCode) {
+								pass.vertexCode = pass.vertexCode.replace(
+									usageRegExp,
+									variable.value
+								);
+							}
+
+							if (pass.fragmentCode) {
+								pass.fragmentCode = pass.fragmentCode.replace(
+									usageRegExp,
+									variable.value
+								);
+							}
+						});
+
+						variable.active = false;
+					} else {
+						const commonMatch = definition.commonCode.match(usageRegExp);
+						let referenced = commonMatch ? commonMatch.length > 0 : false;
+
+						if (
+							definition.passes.some((pass) => {
+								if (pass.fragmentCode) {
+									const fragmentMatch = pass.fragmentCode.match(usageRegExp);
+									if (fragmentMatch && fragmentMatch.length > 0) {
+										return true;
+									}
+								}
+								if (pass.vertexCode) {
+									const vertexMatch = pass.vertexCode.match(usageRegExp);
+									if (vertexMatch && vertexMatch.length > 0) {
+										return true;
+									}
+								}
+								return false;
+							})
+						) {
+							referenced = true;
+						}
+
+						if (!referenced) {
+							console.log(
+								`Global variable "${variable.name}" is not referenced and won't be used.`
+							);
+
+							variable.active = false;
+						}
+					}
 				}
 			});
 
-			const globalsByTypes: { [type: string]: string[] } = {};
-			const uniformArrays: IUniformArrays = {};
-
-			globals.forEach((global) => {
-				if (!global.active) {
+			variables.forEach((variable) => {
+				if (!variable.active) {
 					return;
 				}
 
-				if (global.annotations.uniform) {
-					if (!uniformArrays[global.type]) {
-						uniformArrays[global.type] = {
-							globals: [],
-							name: global.type + 'Uniforms',
+				if (variable.kind === 'uniform') {
+					if (!definition.uniformArrays[variable.type]) {
+						definition.uniformArrays[variable.type] = {
+							name: variable.type + 'Uniforms',
+							variables: [],
 						};
 					}
 
-					const index = uniformArrays[global.type].globals.length;
-					uniformArrays[global.type].globals.push(global);
+					const index =
+						definition.uniformArrays[variable.type].variables.length;
+					definition.uniformArrays[variable.type].variables.push(variable);
 
-					const usageRegExp = new RegExp(`\\b${global.name}\\b`, 'g');
+					const usageRegExp = new RegExp(`\\b${variable.name}\\b`, 'g');
 					const newWriting =
-						uniformArrays[global.type].name + '[' + index + ']';
+						definition.uniformArrays[variable.type].name + '[' + index + ']';
 
-					if (global.referencedInShader) {
-						shader = shader.replace(usageRegExp, newWriting);
-					}
+					definition.commonCode = definition.commonCode.replace(
+						usageRegExp,
+						newWriting
+					);
 
-					global.referencedByGlobals.forEach((otherGlobal) => {
-						otherGlobal.value = otherGlobal.value!.replace(
-							usageRegExp,
-							newWriting
-						);
+					definition.passes.forEach((pass) => {
+						if (pass.fragmentCode) {
+							pass.fragmentCode = pass.fragmentCode.replace(
+								usageRegExp,
+								newWriting
+							);
+						}
+						if (pass.vertexCode) {
+							pass.vertexCode = pass.vertexCode.replace(
+								usageRegExp,
+								newWriting
+							);
+						}
 					});
-				} else {
-					if (!globalsByTypes[global.type]) {
-						globalsByTypes[global.type] = [];
-					}
-
-					let str = global.name;
-					if (global.value) {
-						str += ' = ' + global.value;
-					}
-					globalsByTypes[global.type].push(str);
 				}
 			});
 
-			shader = [
-				config.get('demo:glslVersion')
-					? '#version ' + config.get('demo:glslVersion')
-					: '// No explicit version.',
-			]
-				.concat(
-					Object.keys(uniformArrays).map(
-						(type) =>
-							`uniform ${type} ${uniformArrays[type].name}[${uniformArrays[type].globals.length}];`
-					)
-				)
-				.concat(
-					Object.keys(globalsByTypes).map((type) => {
-						return type + ' ' + globalsByTypes[type].join(', ') + ';';
-					})
-				)
-				.concat([shader])
-				.join('\n');
-
-			let definition: Readonly<IShaderDefinition> = {
-				globals,
-				passMainFunctionNames: config.get('demo:passes'),
-				shader,
-				uniformArrays,
-			};
-
 			if (config.get('minify')) {
-				definition = await shaderMinifier.minify(definition);
+				await shaderMinifier.minify(definition);
 			}
+
+			const globalsByTypes: { [type: string]: string[] } = {};
+			variables.forEach((variable) => {
+				if (!variable.active) {
+					return;
+				}
+
+				if (variable.kind !== 'uniform') {
+					if (!globalsByTypes[variable.type]) {
+						globalsByTypes[variable.type] = [];
+					}
+
+					let str = variable.minifiedName || variable.name;
+					if (variable.kind === 'const') {
+						str += ' = ' + variable.value;
+					}
+					globalsByTypes[variable.type].push(str);
+				}
+			});
+
+			if (definition.glslVersion) {
+				definition.prologCode = `#version ${definition.glslVersion}\n`;
+			}
+
+			definition.commonCode =
+				Object.keys(definition.uniformArrays)
+					.map((type) => {
+						const uniformArray = definition.uniformArrays[type];
+						return `uniform ${type} ${uniformArray.minifiedName ||
+							uniformArray.name}[${uniformArray.variables.length}];`;
+					})
+					.concat(
+						Object.keys(globalsByTypes).map((type) => {
+							return type + ' ' + globalsByTypes[type].join(',') + ';';
+						})
+					)
+					.join('') + definition.commonCode;
 
 			return definition;
 		},

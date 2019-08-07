@@ -1,0 +1,15 @@
+demo:
+  gl:
+    constants:
+      - GL_ARRAY_BUFFER
+    functions:
+      - glBindBuffer
+      - glBindVertexArray
+      - glCreateBuffers
+      - glCreateVertexArrays
+      - glEnableVertexAttribArray
+      - glNamedBufferStorage
+      - glNamedBufferSubData
+      - glVertexAttribPointer
+  hooksFilename: hooks.hpp
+  name: oidos-multipass

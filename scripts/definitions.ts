@@ -1,35 +1,41 @@
 export interface IPass {
-	fragment?: string;
-	vertex?: string;
+	fragmentCode?: string;
+	vertexCode?: string;
 }
 
 export interface IAnnotations {
 	[key: string]: string | boolean;
 }
 
-export interface IGlobal {
-	annotations: IAnnotations;
+export interface IVariable {
+	kind?: string;
+
+	active: boolean;
+	minifiedName?: string;
 	name: string;
 	type: string;
-	value?: string; // For constants.
 }
 
-export type Globals = IGlobal[];
+export interface IConstVariable extends IVariable {
+	kind: 'const';
 
-export interface IAugmentedGlobal extends IGlobal {
-	active: boolean;
-	referencedInShader: boolean;
-	referencesToGlobals: AugmentedGlobals;
-	referencedByGlobals: AugmentedGlobals;
-
-	minifiedName?: string; // For stage input/output variables.
+	value: string;
 }
 
-export type AugmentedGlobals = IAugmentedGlobal[];
+export interface IRegularVariable extends IVariable {
+	kind: 'regular';
+}
+
+export interface IUniformVariable extends IVariable {
+	kind: 'uniform';
+}
+
+export type Variable = IConstVariable | IRegularVariable | IUniformVariable;
 
 export interface IUniformArray {
 	name: string;
-	globals: AugmentedGlobals;
+	minifiedName?: string;
+	variables: IUniformVariable[];
 }
 
 export interface IUniformArrays {
@@ -37,19 +43,25 @@ export interface IUniformArrays {
 }
 
 export interface IShaderDefinition {
-	globals: AugmentedGlobals;
+	prologCode?: string;
+	attributesCode?: string;
+	varyingsCode?: string;
+	outputsCode?: string;
+	commonCode: string;
+	passes: IPass[];
+
+	glslVersion?: string;
 	uniformArrays: IUniformArrays;
-	passMainFunctionNames?: IPass[];
-	shader: string;
+	variables: Variable[];
 }
 
 export interface IShaderProvider {
 	getDefaultConfig(): object;
-	provide(globals: Globals): Promise<string>;
+	provide(definition: IShaderDefinition): Promise<void>;
 }
 
 export interface IShaderMinifier {
-	minify(definition: Readonly<IShaderDefinition>): Promise<IShaderDefinition>;
+	minify(definition: IShaderDefinition): Promise<void>;
 }
 
 export interface IConfig {

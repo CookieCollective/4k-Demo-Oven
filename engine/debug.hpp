@@ -1,9 +1,14 @@
 #pragma once
 
 #ifdef DEBUG
+
 #include <iostream>
 
-static void APIENTRY ShowDebugMessageFromOpenGL(
+static char debugBuffer[4096];
+
+static HWND debugHwnd;
+
+static void APIENTRY showDebugMessageFromOpenGL(
 	GLenum source,
 	GLenum type,
 	GLuint id,
@@ -15,10 +20,10 @@ static void APIENTRY ShowDebugMessageFromOpenGL(
 #ifdef DEBUG_MESSAGE_BOX
 	// TODO : find better. This disable fullscreen, this is the only solution I found to display message box on top...
 	SetWindowPos(
-		hwnd, NULL, 1, 0,
+		debugHwnd, NULL, 1, 0,
 		width, height,
 		SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-	MessageBox(hwnd, message, "Error", MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_SYSTEMMODAL);
+	MessageBox(debugHwnd, message, "Error", MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_SYSTEMMODAL);
 #endif
 
 	fprintf(
@@ -30,13 +35,13 @@ static void APIENTRY ShowDebugMessageFromOpenGL(
 		message);
 }
 
-static void APIENTRY ShowDebugMessage(const char *message)
+static void APIENTRY showDebugMessage(const char *message)
 {
 	fprintf(stderr, "%s\n", message);
 }
 
 //this function can be call after a GL function to check there is no error with it
-static void CheckGLError()
+static void checkGLError()
 {
 	GLenum err = glGetError();
 	if (err != GL_NO_ERROR)
@@ -71,4 +76,18 @@ static void CheckGLError()
 
 	ExitProcess(0);
 }
+
+static void checkShaderCompilation(GLint shader)
+{
+	glGetShaderInfoLog(shader, sizeof(debugBuffer), NULL, debugBuffer);
+	if (debugBuffer[0] != '\0')
+	{
+		showDebugMessage(debugBuffer);
+	}
+}
+
+#else
+
+#define checkShaderCompilation(shader)
+
 #endif

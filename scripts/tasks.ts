@@ -5,7 +5,7 @@ import { encode as originalEncode, spawnCapture } from './capture';
 import { compile } from './compile';
 import { getConfig } from './config';
 import { IConfig } from './definitions';
-import { writeDemoData, writeDemoGl } from './generateSourceCode';
+import { copyHooks, writeDemoData, writeDemoGl } from './generateSourceCode';
 import { emptyDirectories, spawn } from './lib';
 import { Monitor } from './monitor';
 import { zip } from './zip';
@@ -16,8 +16,8 @@ async function internalBuild(config: IConfig) {
 	const shaderDefinition = await config.provideShaderDefinition();
 
 	await writeDemoData(config, shaderDefinition);
-
 	await writeDemoGl(config);
+	await copyHooks(config);
 
 	await compile(config);
 }

@@ -10,25 +10,38 @@
 #include "debug.hpp"
 #include "window.hpp"
 
+#ifdef HAS_HOOKS
+#include <hooks.hpp>
+#endif
+
 void main()
 {
 #ifndef FORCE_RESOLUTION
-	resolutionWidth = GetSystemMetrics(SM_CXSCREEN);
-	resolutionHeight = GetSystemMetrics(SM_CYSCREEN);
+	int resolutionWidth = GetSystemMetrics(SM_CXSCREEN);
+	int resolutionHeight = GetSystemMetrics(SM_CYSCREEN);
 
 #ifdef SCALE_RESOLUTION
 	resolutionWidth *= SCALE_RESOLUTION;
 	resolutionHeight *= SCALE_RESOLUTION;
 #endif
+
+#ifdef uniformResolutionWidth
+	uniformResolutionWidth = (float)resolutionWidth;
 #endif
 
-	hwnd = CreateWindow("static", NULL, WS_POPUP | WS_VISIBLE, 0, 0, resolutionWidth, resolutionHeight, NULL, NULL, NULL, 0);
+#ifdef uniformResolutionHeight
+	uniformResolutionHeight = (float)resolutionHeight;
+#endif
+
+#endif
+
+	auto hwnd = CreateWindow("static", NULL, WS_POPUP | WS_VISIBLE, 0, 0, resolutionWidth, resolutionHeight, NULL, NULL, NULL, 0);
 	auto hdc = GetDC(hwnd);
 	SetPixelFormat(hdc, ChoosePixelFormat(hdc, &pfd), &pfd);
 	wglMakeCurrent(hdc, wglCreateContext(hdc));
 	ShowCursor(FALSE);
 
-	// Display a black screen while loading audio.
+	// Display a black screen while loading.
 	wglSwapLayerBuffers(hdc, WGL_SWAP_MAIN_PLANE);
 
 	for (auto i = 0; i < GL_EXT_FUNCTION_COUNT; ++i)
@@ -37,6 +50,8 @@ void main()
 	}
 
 #ifdef DEBUG
+	debugHwnd = hwnd;
+
 	// Display Opengl info in console.
 	printf("OpenGL version: %s\n", (char *)glGetString(GL_VERSION));
 	// printf("OpenGL extensions: %s\n\n", (char *)glGetString(GL_EXTENSIONS));
@@ -44,7 +59,7 @@ void main()
 	//TODO : here we set a callback function for GL to use when an error is encountered. Does not seem to work !
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	glDebugMessageCallback(ShowDebugMessageFromOpenGL, NULL);
+	glDebugMessageCallback(showDebugMessageFromOpenGL, NULL);
 	glDebugMessageControl(
 		GL_DONT_CARE,
 		GL_DONT_CARE,
@@ -52,38 +67,63 @@ void main()
 		0,
 		0,
 		true);
-
-	char debugBuffer[512];
 #endif
 
+#if PASSES == 1
 	GLint program = glCreateProgram();
+
+#ifdef HAS_SHADER_PASS_0_VERTEX_CODE
+	const char *vertexShaderSources[] = {
+#ifdef HAS_SHADER_PROLOG_CODE
+		shaderPrologCode,
+#endif
+#ifdef HAS_SHADER_VERTEX_SPECIFIC_CODE
+		shaderVertexSpecificCode,
+#endif
+#ifdef HAS_SHADER_COMMON_CODE
+		shaderCommonCode,
+#endif
+		shaderPassCodes[0],
+	};
+
+	GLint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, sizeof(vertexShaderSources) / sizeof(vertexShaderSources[0]), vertexShaderSources, 0);
+	glCompileShader(vertexShader);
+	checkShaderCompilation(vertexShader);
+	glAttachShader(program, vertexShader);
+#endif
+
+#ifdef HAS_SHADER_PASS_0_FRAGMENT_CODE
+	const char *fragmentShaderSources[] = {
+#ifdef HAS_SHADER_PROLOG_CODE
+		shaderPrologCode,
+#endif
+#ifdef HAS_SHADER_FRAGMENT_SPECIFIC_CODE
+		shaderFragmentSpecificCode,
+#endif
+#ifdef HAS_SHADER_COMMON_CODE
+		shaderCommonCode,
+#endif
+		shaderPassCodes[1],
+	};
+
 	GLint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	glShaderSource(fragmentShader, 1, &shaderSource, 0);
-#ifdef DEBUG
-	glGetShaderInfoLog(fragmentShader, sizeof(debugBuffer), NULL, debugBuffer);
-	if (debugBuffer[0] != '\0')
-	{
-		ShowDebugMessage(debugBuffer);
-	}
-#endif
-
+	glShaderSource(fragmentShader, sizeof(fragmentShaderSources) / sizeof(fragmentShaderSources[0]), fragmentShaderSources, 0);
 	glCompileShader(fragmentShader);
-#ifdef DEBUG
-	glGetShaderInfoLog(fragmentShader, sizeof(debugBuffer), NULL, debugBuffer);
-	if (debugBuffer[0] != '\0')
-	{
-		ShowDebugMessage(debugBuffer);
-	}
+	checkShaderCompilation(fragmentShader);
+	glAttachShader(program, fragmentShader);
 #endif
 
-	glAttachShader(program, fragmentShader);
 	glLinkProgram(program);
 	glUseProgram(program);
 
-#ifndef FORCE_RESOLUTION
-	uniformResolutionHeight = (float)resolutionHeight;
-	uniformResolutionWidth = (float)resolutionWidth;
+#else
+#error Not implemented.
+
+#endif
+
+#ifdef HAS_HOOKS
+	initialization();
 #endif
 
 #ifdef BUFFERS
@@ -133,7 +173,7 @@ void main()
 	glRects(-1, -1, 1, 1);
 
 	glReadPixels(0, 0, SOUND_TEXTURE_SIZE, SOUND_TEXTURE_SIZE, GL_RGBA, GL_FLOAT, soundBuffer);
-	glViewport(0, 0, width, height);
+	glViewport(0, 0, resolutionWidth, resolutionHeight);
 	glFinish();
 
 #ifdef DEBUG
@@ -189,7 +229,12 @@ void main()
 						  GL_COLOR_BUFFER_BIT,
 						  GL_NEAREST);
 #else
-		glUniform1fv(0, FLOAT_UNIFORMS_COUNT, floatUniforms);
+		glUniform1fv(0, FLOAT_UNIFORM_COUNT, floatUniforms);
+#endif
+
+#ifdef HAS_HOOKS
+		render();
+#else
 		glRects(-1, -1, 1, 1);
 #endif
 

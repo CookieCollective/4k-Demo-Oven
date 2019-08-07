@@ -1,7 +1,8 @@
-import { readFile, writeFile } from 'fs-extra';
+import { copy, readFile, writeFile } from 'fs-extra';
 import { join } from 'path';
 
 import { IConfig, IShaderDefinition } from './definitions';
+import { forEachMatch } from './lib';
 
 export async function writeDemoData(
 	config: IConfig,
@@ -9,35 +10,129 @@ export async function writeDemoData(
 ) {
 	const buildDirectory: string = config.get('paths:build');
 
-	const shader = definition.shader
-		.replace(/\n/g, '\\n')
-		.replace(/"/g, '\\"')
-		.replace(/\r/g, '');
+	function escape(str: string) {
+		return str
+			.replace(/\n/g, '\\n')
+			.replace(/\r/g, '')
+			.replace(/"/g, '\\"');
+	}
 
-	const fileContents = [`static const char *shaderSource = "${shader}";`];
+	const fileContents = ['#pragma once', ''];
+
+	if (config.get('debug')) {
+		fileContents.push('#define DEBUG', '');
+	}
 
 	Object.keys(definition.uniformArrays).forEach((type) => {
-		const macroName = `${type.toUpperCase()}_UNIFORMS_COUNT`;
+		const macroName = `${type.toUpperCase()}_UNIFORM_COUNT`;
 		const arrayName = `${type}Uniforms`;
 		fileContents.push(
-			`#define ${macroName} ${definition.uniformArrays[type].globals.length}`,
+			`#define ${macroName} ${definition.uniformArrays[type].variables.length}`,
 			`static ${type} ${arrayName}[${macroName}];`
 		);
-		definition.uniformArrays[type].globals.forEach((global, index) => {
-			const name = global.name
+		definition.uniformArrays[type].variables.forEach((variable, index) => {
+			const name = variable.name
 				.replace(/^\w|\b\w/g, (letter) => letter.toUpperCase())
 				.replace(/_+/g, '');
 			fileContents.push(`#define uniform${name} ${arrayName}[${index}]`);
 		});
+		fileContents.push('');
 	});
 
-	if (config.get('debug')) {
-		fileContents.push('#define DEBUG');
+	let prologCode = definition.prologCode;
+	let commonCode = definition.commonCode;
+
+	const stageVariableRegExp = /\w+ [\w,]+;/g;
+	let vertexSpecificCode = '';
+	let fragmentSpecificCode = '';
+
+	if (definition.attributesCode) {
+		forEachMatch(stageVariableRegExp, definition.attributesCode, (match) => {
+			vertexSpecificCode += 'in ' + match[0];
+		});
 	}
+
+	if (definition.varyingsCode) {
+		forEachMatch(stageVariableRegExp, definition.varyingsCode, (match) => {
+			vertexSpecificCode += 'out ' + match[0];
+			fragmentSpecificCode += 'in ' + match[0];
+		});
+	}
+
+	if (definition.outputsCode) {
+		forEachMatch(stageVariableRegExp, definition.outputsCode, (match) => {
+			fragmentSpecificCode += 'out ' + match[0];
+		});
+	}
+
+	if (prologCode && !vertexSpecificCode && !fragmentSpecificCode) {
+		commonCode = prologCode + commonCode;
+		prologCode = '';
+	}
+
+	if (prologCode) {
+		fileContents.push(
+			'#define HAS_SHADER_PROLOG_CODE',
+			`static const char *shaderPrologCode = "${escape(prologCode)}";`,
+			''
+		);
+	}
+
+	if (vertexSpecificCode) {
+		fileContents.push(
+			'#define HAS_SHADER_VERTEX_SPECIFIC_CODE',
+			`static const char *shaderVertexSpecificCode = "${escape(
+				vertexSpecificCode
+			)}";`,
+			''
+		);
+	}
+
+	if (fragmentSpecificCode) {
+		fileContents.push(
+			'#define HAS_SHADER_FRAGMENT_SPECIFIC_CODE',
+			`static const char *shaderFragmentSpecificCode = "${escape(
+				fragmentSpecificCode
+			)}";`,
+			''
+		);
+	}
+
+	if (commonCode) {
+		fileContents.push(
+			'#define HAS_SHADER_COMMON_CODE',
+			`static const char *shaderCommonCode = "${escape(commonCode)}";`,
+			''
+		);
+	}
+
+	fileContents.push('#define PASSES ' + definition.passes.length);
+
+	fileContents.push('static const char *shaderPassCodes[] = {');
+	definition.passes.forEach((pass, index) => {
+		if (pass.vertexCode) {
+			fileContents.push(
+				`#define HAS_SHADER_PASS_${index}_VERTEX_CODE`,
+				`"${escape(pass.vertexCode)}",`
+			);
+		} else {
+			fileContents.push('nullptr,');
+		}
+
+		if (pass.fragmentCode) {
+			fileContents.push(
+				`#define HAS_SHADER_PASS_${index}_FRAGMENT_CODE`,
+				`"${escape(pass.fragmentCode)}",`
+			);
+		} else {
+			fileContents.push('nullptr,');
+		}
+	});
+	fileContents.push('};', '');
 
 	const bufferCount = config.get('demo:bufferCount');
 	if (bufferCount && bufferCount > 0) {
-		fileContents.push('#define BUFFERS ' + bufferCount);
+		fileContents.push('#define BUFFER_COUNT ' + bufferCount);
 	}
 
 	if (config.get('demo:audio:tool') === 'shader') {
@@ -75,8 +170,6 @@ export async function writeDemoData(
 					config.get('demo:resolution:height') +
 					';'
 			);
-		} else {
-			fileContents.push('static int resolutionWidth, resolutionHeight;');
 		}
 
 		const scale = config.get('demo:resolution:scale');
@@ -85,8 +178,14 @@ export async function writeDemoData(
 		}
 	}
 
+	fileContents.push('');
+
 	if (config.get('capture') || config.get('demo:closeWhenFinished')) {
-		fileContents.push('#define CLOSE_WHEN_FINISHED');
+		fileContents.push('#define CLOSE_WHEN_FINISHED', '');
+	}
+
+	if (config.get('demo:hooksFilename')) {
+		fileContents.push('#define HAS_HOOKS', '');
 	}
 
 	await writeFile(
@@ -97,13 +196,19 @@ export async function writeDemoData(
 
 export async function writeDemoGl(config: IConfig) {
 	const fileContents = [
+		'#pragma once',
+		'',
 		'#include <GL/gl.h>',
+		'',
 		'#define APIENTRYP __stdcall *',
 		'typedef char GLchar;',
+		'typedef ptrdiff_t GLintptr;',
+		'typedef ptrdiff_t GLsizeiptr;',
 		'typedef void (APIENTRY * GLDEBUGPROC)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,const GLchar * message,const void * userParam);',
+		'',
 	];
 
-	const glConstantNames = ['GL_FRAGMENT_SHADER'];
+	const glConstantNames = ['GL_FRAGMENT_SHADER', 'GL_VERTEX_SHADER'];
 
 	const glFunctionNames = [
 		'glAttachShader',
@@ -112,8 +217,8 @@ export async function writeDemoGl(config: IConfig) {
 		'glCreateShader',
 		'glLinkProgram',
 		'glShaderSource',
-		'glUseProgram',
 		'glUniform1fv',
+		'glUseProgram',
 	];
 
 	function addGlConstantName(constantName: string) {
@@ -137,8 +242,8 @@ export async function writeDemoGl(config: IConfig) {
 		].forEach(addGlConstantName);
 
 		[
-			'glDebugMessageControl',
 			'glDebugMessageCallback',
+			'glDebugMessageControl',
 			'glGetShaderInfoLog',
 			'glGetUniformLocation',
 		].forEach(addGlFunctionName);
@@ -188,13 +293,23 @@ export async function writeDemoGl(config: IConfig) {
 
 	fileContents.push(
 		'#define GL_EXT_FUNCTION_COUNT ' + glExtFunctionNames.length,
-		'static const char *glExtFunctionNames[GL_EXT_FUNCTION_COUNT] = { ' +
-			glExtFunctionNames.join(', ') +
-			' };',
+		'static const char *glExtFunctionNames[GL_EXT_FUNCTION_COUNT] = { ',
+		glExtFunctionNames.join(',\n'),
+		' };',
 		'static void *glExtFunctions[GL_EXT_FUNCTION_COUNT];'
 	);
 
 	const buildDirectory: string = config.get('paths:build');
 
 	await writeFile(join(buildDirectory, 'demo-gl.hpp'), fileContents.join('\n'));
+}
+
+export async function copyHooks(config: IConfig) {
+	const hooksFilename = config.get('demo:hooksFilename');
+	if (hooksFilename) {
+		const src = join(config.get('directory'), hooksFilename);
+		const dest = join(config.get('paths:build'), 'hooks.hpp');
+
+		await copy(src, dest);
+	}
 }

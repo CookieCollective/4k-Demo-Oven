@@ -23,10 +23,9 @@ export class Monitor {
 
 			console.log('Build successful.');
 			console.log(
-				'Build duration: %s seconds.',
-				((endTime - startTime) * 1e-3).toFixed(1)
+				`Build duration: ${((endTime - startTime) * 1e-3).toFixed(1)} seconds.`
 			);
-			console.log('Demo size: %d bytes.', this.size);
+			console.log(`Demo size: ${this.size} bytes.`);
 		} catch (err) {
 			console.error('Build failed.');
 			console.error(err);

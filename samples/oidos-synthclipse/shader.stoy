@@ -18,9 +18,9 @@ uniform vec3 SphereColor1;//! color[1, 1, 1]
 
 const float TAU=6.283;
 
-const float beat = time * BPM/60.;
-
 // START
+
+const float beat = time * BPM/60.;
 
 struct D
 {
