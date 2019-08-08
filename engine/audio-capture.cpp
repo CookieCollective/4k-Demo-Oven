@@ -2,9 +2,7 @@
 #define WIN32_EXTRA_LEAN
 #include <windows.h>
 
-#include <demo-data.hpp>
-
-#include <GL/gl.h>
+#include "demo.hpp"
 
 static int frameNumber;
 static HANDLE frameFile;

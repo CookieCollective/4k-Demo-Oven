@@ -1,11 +1,12 @@
 import { series, watch as originalWatch } from 'gulp';
-import { resolve } from 'path';
+import { join, resolve } from 'path';
 
 import { encode as originalEncode, spawnCapture } from './capture';
 import { compile } from './compile';
 import { getConfig } from './config';
 import { IConfig } from './definitions';
-import { writeDemoData, writeDemoGl } from './generateSourceCode';
+import { writeDemoData, writeDemoGl } from './generate-source-codes';
+import { updateShaders } from './hot-reload';
 import { emptyDirectories, spawn } from './lib';
 import { Monitor } from './monitor';
 import { zip } from './zip';
@@ -73,6 +74,16 @@ export async function encode() {
 	await originalEncode(config);
 }
 
+export async function hotReload() {
+	const config = getConfig({
+		capture: true,
+	});
+
+	const shaderDefinition = await config.provideShaderDefinition();
+
+	await updateShaders(config, shaderDefinition);
+}
+
 export async function showConfig() {
 	const config = getConfig({
 		capture: true,
@@ -85,7 +96,10 @@ export function watch() {
 		capture: false,
 	});
 
-	originalWatch([config.get('directory') + '/**/*', 'engine/**/*'], build);
+	return originalWatch(
+		[join(config.get('directory'), '**', '*').replace(/\\/g, '/')],
+		hotReload
+	);
 }
 
 export default build;

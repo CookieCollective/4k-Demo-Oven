@@ -32,6 +32,7 @@ export function spawn(
 	options?: SpawnOptionsWithoutStdio
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
+		console.log(`Executing ${command} ${args.join(' ')}`);
 		const cp = originalSpawn(command, args, options);
 
 		cp.stdout.on('data', (data) => {

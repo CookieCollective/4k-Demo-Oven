@@ -2,13 +2,15 @@
 #define WIN32_EXTRA_LEAN
 #include <windows.h>
 
-#include <demo-data.hpp>
-#include <demo-gl.hpp>
-
-#include "definitions.hpp"
+#include "demo.hpp"
 
 #include "debug.hpp"
+#include "definitions.hpp"
 #include "window.hpp"
+
+#ifdef SERVER
+#include "server.hpp"
+#endif
 
 #ifdef HOOK_DECLARATIONS
 HOOK_DECLARATIONS
@@ -35,28 +37,27 @@ void main()
 
 #endif
 
-	auto hwnd = CreateWindow("static", NULL, WS_POPUP | WS_VISIBLE, 0, 0, resolutionWidth, resolutionHeight, NULL, NULL, NULL, 0);
+	auto hwnd = CreateWindowA("static", NULL, WS_POPUP | WS_VISIBLE, 0, 0, resolutionWidth, resolutionHeight, NULL, NULL, NULL, 0);
 	auto hdc = GetDC(hwnd);
 	SetPixelFormat(hdc, ChoosePixelFormat(hdc, &pfd), &pfd);
 	wglMakeCurrent(hdc, wglCreateContext(hdc));
 	ShowCursor(FALSE);
 
+#ifdef DEBUG
+	debugHwnd = hwnd;
+#endif
+
 #ifdef LOADING_BLACK_SCREEN
 	wglSwapLayerBuffers(hdc, WGL_SWAP_MAIN_PLANE);
 #endif
 
-	for (auto i = 0; i < GL_EXT_FUNCTION_COUNT; ++i)
-	{
-		glExtFunctions[i] = wglGetProcAddress(glExtFunctionNames[i]);
-	}
+	loadGLFunctions();
 
 #ifdef DEBUG
-	debugHwnd = hwnd;
-
 	// Display Opengl info in console.
-	printf("OpenGL version: %s\n", (char *)glGetString(GL_VERSION));
-	// printf("OpenGL extensions: %s\n\n", (char *)glGetString(GL_EXTENSIONS));
-	printf("\n");
+	std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl;
+	// std::cout << "OpenGL extensions: " << glGetString(GL_EXTENSIONS) << std::endl;
+	std::cout << std::endl;
 
 	//TODO : here we set a callback function for GL to use when an error is encountered. Does not seem to work !
 	/*
@@ -71,6 +72,11 @@ void main()
 		0,
 		true);
 		*/
+#endif
+
+#ifdef SERVER
+	StartServerOptions startServerOptions = {};
+	startServerOptions.port = SERVER_PORT;
 #endif
 
 #if PASS_COUNT == 1
@@ -123,9 +129,13 @@ void main()
 	checkGLError();
 
 #ifdef DEBUG
-	printf("Uniform locations:\n");
+	std::cout << "Uniform locations:" << std::endl;
 	DEBUG_DISPLAY_UNIFORM_LOATIONS(program);
-	printf("\n");
+	std::cout << std::endl;
+#endif
+
+#ifdef SERVER
+	startServerOptions.programs = &program;
 #endif
 
 	glUseProgram(program);
@@ -159,9 +169,14 @@ void main()
 			glShaderSource(vertexShader, sizeof(vertexShaderSources) / sizeof(vertexShaderSources[0]), vertexShaderSources, 0);
 			checkGLError();
 			glCompileShader(vertexShader);
+			checkGLError();
 			checkShaderCompilation(vertexShader);
 			glAttachShader(programs[i], vertexShader);
 			checkGLError();
+
+#ifdef DEBUG
+			debugVertexShaders[i] = vertexShader;
+#endif
 		}
 
 		if (shaderPassCodes[i * 2 + 1])
@@ -187,17 +202,29 @@ void main()
 			checkShaderCompilation(fragmentShader);
 			glAttachShader(programs[i], fragmentShader);
 			checkGLError();
+
+#ifdef DEBUG
+			debugFragmentShaders[i] = fragmentShader;
+#endif
 		}
 
 		glLinkProgram(programs[i]);
 		checkGLError();
 
 #ifdef DEBUG
-		printf("Uniform locations in pass %d:\n", i);
+		std::cout << "Uniform locations in pass " << i << ":" << std::endl;
 		DEBUG_DISPLAY_UNIFORM_LOATIONS(programs[i]);
-		printf("\n");
+		std::cout << std::endl;
+#endif
+
+#ifdef SERVER
+		startServerOptions.programs = programs;
 #endif
 	}
+#endif
+
+#ifdef SERVER
+	serverStart(startServerOptions);
 #endif
 
 #ifdef HOOK_INITIALIZE
@@ -229,12 +256,20 @@ void main()
 
 		captureFrame();
 
+#ifdef SERVER
+		serverUpdate();
+#endif
+
 		wglSwapLayerBuffers(hdc, WGL_SWAP_MAIN_PLANE);
 	} while (
 #ifdef CLOSE_WHEN_FINISHED
 		!audioIsFinished() &&
 #endif
 		!GetAsyncKeyState(VK_ESCAPE));
+
+#ifdef SERVER
+	serverStop();
+#endif
 
 	ExitProcess(0);
 }

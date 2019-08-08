@@ -21,6 +21,14 @@ export async function writeDemoData(
 
 	if (config.get('debug')) {
 		fileContents.push('#define DEBUG', '');
+
+		if (config.get('server')) {
+			fileContents.push(
+				'#define SERVER',
+				`#define SERVER_PORT ${config.get('server:port')}`,
+				''
+			);
+		}
 	}
 
 	let debugDisplayUniformLocations = '';
@@ -50,7 +58,7 @@ export async function writeDemoData(
 
 		fileContents.push('');
 
-		debugDisplayUniformLocations += `printf("%s: %ld\\n", "${type}", glGetUniformLocation(PROGRAM, ${nameMacro})); \\\n`;
+		debugDisplayUniformLocations += `std::cout << "${type}: " << glGetUniformLocation(PROGRAM, ${nameMacro}) << std::endl; \\\n`;
 	});
 
 	fileContents.push(
@@ -235,7 +243,7 @@ export async function writeDemoGl(config: IConfig) {
 		'',
 		'#include <GL/gl.h>',
 		'',
-		'#define APIENTRYP __stdcall *',
+		'#define GLAPIENTRY __stdcall',
 		'typedef char GLchar;',
 		'typedef ptrdiff_t GLintptr;',
 		'typedef ptrdiff_t GLsizeiptr;',
@@ -268,22 +276,6 @@ export async function writeDemoGl(config: IConfig) {
 		}
 	}
 
-	if (config.get('debug')) {
-		[
-			'GL_DEBUG_OUTPUT',
-			'GL_DEBUG_OUTPUT_SYNCHRONOUS',
-			'GL_DEBUG_TYPE_ERROR',
-			'GL_INVALID_FRAMEBUFFER_OPERATION_EXT',
-		].forEach(addGlConstantName);
-
-		[
-			'glDebugMessageCallback',
-			'glDebugMessageControl',
-			'glGetShaderInfoLog',
-			'glGetUniformLocation',
-		].forEach(addGlFunctionName);
-	}
-
 	function addFromConfig(key: string, action: (name: string) => void) {
 		const value = config.get(key);
 		if (Array.isArray(value)) {
@@ -294,10 +286,13 @@ export async function writeDemoGl(config: IConfig) {
 	addFromConfig('demo:gl:constants', addGlConstantName);
 	addFromConfig('demo:gl:functions', addGlFunctionName);
 
-	const glextContents = await readFile(config.get('tools:glext'), 'utf8');
+	const glewContents = await readFile(
+		join(config.get('tools:glew:include'), 'GL', 'glew.h'),
+		'utf8'
+	);
 
 	glConstantNames.forEach((constantName: string) => {
-		const match = glextContents.match(
+		const match = glewContents.match(
 			new RegExp(`^#define ${constantName} .+$`, 'gm')
 		);
 		if (match) {
@@ -311,8 +306,8 @@ export async function writeDemoGl(config: IConfig) {
 
 	glFunctionNames.forEach((functionName, index) => {
 		const typedefName = 'PFN' + functionName.toUpperCase() + 'PROC';
-		const match = glextContents.match(
-			new RegExp(`^typedef \\w+ ?\\(APIENTRYP ${typedefName}\\).+$`, 'gm')
+		const match = glewContents.match(
+			new RegExp(`^typedef \\w+ \\(GLAPIENTRY \\* ${typedefName}\\).+$`, 'gm')
 		);
 		if (match) {
 			fileContents.push(
@@ -331,7 +326,8 @@ export async function writeDemoGl(config: IConfig) {
 		'static const char *glExtFunctionNames[GL_EXT_FUNCTION_COUNT] = { ',
 		glExtFunctionNames.join(',\n'),
 		' };',
-		'static void *glExtFunctions[GL_EXT_FUNCTION_COUNT];'
+		'static void *glExtFunctions[GL_EXT_FUNCTION_COUNT];',
+		''
 	);
 
 	const buildDirectory: string = config.get('paths:build');

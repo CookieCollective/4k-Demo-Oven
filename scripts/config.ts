@@ -58,6 +58,12 @@ export function getConfig(options: IOptions): IConfig {
 				describe: 'Display a notification when build ends.',
 				type: 'boolean',
 			},
+			server: {
+				alias: 's',
+				default: true,
+				describe: 'Create a server for hot reloading.',
+				type: 'boolean',
+			},
 			zip: {
 				alias: 'z',
 				default: false,
@@ -245,13 +251,16 @@ export function getConfig(options: IOptions): IConfig {
 				return join(config.get('paths:build'), 'frames');
 			},
 		},
+		server: {
+			port: 3000,
+		},
 		tools: {
 			// 4klang
 			'7z': '7z',
 			// 8klang
 			crinkler: 'crinkler',
 			ffmpeg: 'ffmpeg',
-			// glext
+			// glew
 			mono: 'mono',
 			nasm: 'nasm',
 			// oidos
@@ -264,7 +273,7 @@ export function getConfig(options: IOptions): IConfig {
 		'demo:name',
 		'paths:build',
 		'paths:exe',
-		'tools:glext',
+		'tools:glew:include',
 	]);
 
 	if (options.capture) {

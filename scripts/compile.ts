@@ -20,6 +20,8 @@ export async function compile(config: IConfig) {
 	const asmSources: ISources = {};
 	const cppSources: ISources = {};
 
+	let outArgs = ['/OUT:' + config.get('paths:exe')];
+
 	cppSources[join(buildDirectory, 'main.obj')] = {
 		dependencies: [
 			join(buildDirectory, 'demo-data.hpp'),
@@ -28,6 +30,19 @@ export async function compile(config: IConfig) {
 		],
 		source: join('engine', 'main.cpp'),
 	};
+
+	if (config.get('debug')) {
+		cppSources[join(buildDirectory, 'debug.obj')] = {
+			source: join('engine', 'debug.cpp'),
+		};
+
+		if (config.get('server')) {
+			cppSources[join(buildDirectory, 'server.obj')] = {
+				source: join('engine', 'server.cpp'),
+			};
+			outArgs.push('httpapi.lib');
+		}
+	}
 
 	if (config.get('capture')) {
 		cppSources[join(buildDirectory, 'audio-capture.obj')] = {
@@ -143,6 +158,7 @@ export async function compile(config: IConfig) {
 						.concat(config.get('cl:args'))
 						.concat([
 							'/I' + buildDirectory,
+							'/I' + config.get('tools:glew:include'),
 							'/Idemo',
 							'/FA',
 							'/Fa' + obj + '.asm',
@@ -154,24 +170,24 @@ export async function compile(config: IConfig) {
 			)
 		),
 	]).then(() => {
-		const outArg = '/OUT:' + config.get('paths:exe');
+		outArgs = outArgs
+			.concat(Object.keys(asmSources))
+			.concat(Object.keys(cppSources));
 
 		return config.get('debug')
 			? spawn(
 					'link',
 					config
 						.get('link:args')
-						.concat([outArg])
-						.concat(Object.keys(asmSources))
-						.concat(Object.keys(cppSources))
+						.concat([config.get('tools:glew:lib')])
+						.concat(outArgs)
 			  )
 			: spawn(
 					config.get('tools:crinkler'),
 					config
 						.get('crinkler:args')
-						.concat(['/REPORT:' + join(buildDirectory, 'stats.html'), outArg])
-						.concat(Object.keys(asmSources))
-						.concat(Object.keys(cppSources))
+						.concat(['/REPORT:' + join(buildDirectory, 'stats.html')])
+						.concat(outArgs)
 			  );
 	});
 }
