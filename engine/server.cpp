@@ -121,7 +121,7 @@ static std::unique_ptr<Buffer> readBody(const HTTP_REQUEST *pRequest)
 
 	if (pEntityBuffer == NULL)
 	{
-		wprintf(L"Insufficient resources.\n");
+		std::cerr << "Insufficient resources." << std::endl;
 		return totalBuffer;
 	}
 
@@ -162,7 +162,7 @@ static std::unique_ptr<Buffer> readBody(const HTTP_REQUEST *pRequest)
 				break;
 
 			default:
-				wprintf(L"HttpReceiveRequestEntityBody failed with %lu.\n", result);
+				std::cerr << "HttpReceiveRequestEntityBody failed with " << result << "." << std::endl;
 				return totalBuffer;
 			}
 		}
@@ -209,7 +209,7 @@ static DWORD SendHttpResponse(
 
 	if (result != NO_ERROR)
 	{
-		wprintf(L"HttpSendHttpResponse failed with %lu \n", result);
+		std::cerr << "HttpSendHttpResponse failed with " << result << "." << std::endl;
 	}
 
 	return result;
@@ -352,28 +352,28 @@ void serverStart(const StartServerOptions &_options)
 {
 	options = _options;
 
-	ULONG retCode = HttpInitialize(HTTPAPI_VERSION_1, HTTP_INITIALIZE_SERVER, NULL);
+	ULONG result = HttpInitialize(HTTPAPI_VERSION_1, HTTP_INITIALIZE_SERVER, NULL);
 
-	if (retCode != NO_ERROR)
+	if (result != NO_ERROR)
 	{
-		wprintf(L"HttpInitialize failed with %lu.\n", retCode);
+		std::cerr << "HttpInitialize failed with " << result << "." << std::endl;
 		return;
 	}
 
-	retCode = HttpCreateHttpHandle(&hReqQueue, 0);
+	result = HttpCreateHttpHandle(&hReqQueue, 0);
 
-	if (retCode != NO_ERROR)
+	if (result != NO_ERROR)
 	{
-		wprintf(L"HttpCreateHttpHandle failed with %lu.\n", retCode);
+		std::cerr << "HttpCreateHttpHandle failed with " << result << "." << std::endl;
 	}
 
 	swprintf_s(urlBuffer, sizeof(urlBuffer), L"http://localhost:%d/", options.port);
 
-	retCode = HttpAddUrl(hReqQueue, urlBuffer, NULL);
+	result = HttpAddUrl(hReqQueue, urlBuffer, NULL);
 
-	if (retCode != NO_ERROR)
+	if (result != NO_ERROR)
 	{
-		wprintf(L"HttpAddUrl failed with %lu.\n", retCode);
+		std::cerr << "HttpAddUrl failed with " << result << "." << std::endl;
 		return;
 	}
 
@@ -382,6 +382,8 @@ void serverStart(const StartServerOptions &_options)
 	context.initialize();
 
 	initializeAsyncReceive();
+
+	std::cout << "Server listening on localhost:" << options.port << "." << std::endl;
 }
 
 void serverStop()

@@ -3,7 +3,7 @@ import * as request from 'request-promise-native';
 import { IContext, IDemoDefinition } from './definitions';
 import { forEachMatch } from './lib';
 
-export async function updateShaders(context: IContext, demo: IDemoDefinition) {
+export async function updateDemo(context: IContext, demo: IDemoDefinition) {
 	const baseUrl = `http://localhost:${context.config.get('server:port')}/`;
 
 	const requests: request.RequestPromise[] = [];

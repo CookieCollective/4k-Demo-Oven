@@ -2,16 +2,17 @@ import { pathExistsSync, statSync } from 'fs-extra';
 import { Provider } from 'nconf';
 import * as yaml from 'nconf-yaml';
 import { dirname, join } from 'path';
-import { IContext, IShaderMinifier, IShaderProvider } from './definitions';
+import {
+	IContext,
+	IContextOptions,
+	IShaderMinifier,
+	IShaderProvider,
+} from './definitions';
 import { ShaderMinifierShaderMinifier } from './shader-minifiers/shader-minifier';
 import { SimpleShaderProvider } from './shader-providers/simple';
 import { SynthclipseShaderProvider } from './shader-providers/synthclipse';
 
-export interface IOptions {
-	capture: boolean;
-}
-
-export function provideContext(options: IOptions): IContext {
+export function provideContext(options: IContextOptions): IContext {
 	const config = new Provider();
 
 	config.set('capture', options.capture);
@@ -22,7 +23,7 @@ export function provideContext(options: IOptions): IContext {
 		.argv({
 			debug: {
 				alias: 'd',
-				default: false,
+				default: typeof options.debug !== 'undefined' ? options.debug : false,
 				describe: 'Compile a debugging version.',
 				type: 'boolean',
 			},
@@ -31,12 +32,6 @@ export function provideContext(options: IOptions): IContext {
 				default: 'demo',
 				describe: 'Home of your demo-specific files.',
 				type: 'string',
-			},
-			execute: {
-				alias: 'x',
-				default: false,
-				describe: 'Execute after a successful build.',
-				type: 'boolean',
 			},
 			minify: {
 				alias: 'm',

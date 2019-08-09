@@ -1,3 +1,8 @@
+export interface IContextOptions {
+	capture?: boolean;
+	debug?: boolean;
+}
+
 export interface IPass {
 	fragmentCode?: string;
 	vertexCode?: string;

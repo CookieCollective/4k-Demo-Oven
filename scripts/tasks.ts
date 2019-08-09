@@ -1,4 +1,4 @@
-import { series, watch as originalWatch } from 'gulp';
+import { watch as originalWatch } from 'gulp';
 import { join, resolve } from 'path';
 
 import { encode as originalEncode, spawnCapture } from './capture';
@@ -11,12 +11,12 @@ import {
 	writeDemoGl,
 	writeDemoMain,
 } from './generate-source-codes';
-import { updateShaders } from './hot-reload';
+import { updateDemo as originalUpdateDemo } from './hot-reload';
 import { emptyDirectories, spawn } from './lib';
 import { Monitor } from './monitor';
 import { zip } from './zip';
 
-async function internalBuild(context: IContext) {
+async function buildDemo(context: IContext) {
 	await emptyDirectories(context);
 
 	const demo = await provideDemo(context);
@@ -28,21 +28,13 @@ async function internalBuild(context: IContext) {
 	await compile(context);
 }
 
-export async function build() {
-	const context = provideContext({
-		capture: false,
-	});
-
+async function buildWithContext(context: IContext) {
 	const monitor = new Monitor(context);
 
 	await monitor.run(async () => {
-		await internalBuild(context);
+		await buildDemo(context);
 
 		await monitor.notifySuccess();
-
-		if (context.config.get('execute')) {
-			await spawn(resolve(context.config.get('paths:exe')), []);
-		}
 
 		if (context.config.get('zip')) {
 			await zip(context);
@@ -50,12 +42,37 @@ export async function build() {
 	});
 }
 
+function executeWithContext(context: IContext) {
+	return spawn(resolve(context.config.get('paths:exe')), []);
+}
+
+async function updateDemoWithContext(context: IContext) {
+	const demo = await provideDemo(context);
+
+	await originalUpdateDemo(context, demo);
+}
+
+function watchWithContext(context: IContext) {
+	const updateDemo = () => updateDemoWithContext(context);
+
+	return originalWatch(
+		[join(context.config.get('directory'), '**', '*').replace(/\\/g, '/')],
+		updateDemo
+	);
+}
+
+export function build() {
+	const context = provideContext({});
+
+	return buildWithContext(context);
+}
+
 export async function capture() {
 	const context = provideContext({
 		capture: true,
 	});
 
-	await internalBuild(context);
+	await buildDemo(context);
 
 	await spawnCapture(context);
 
@@ -70,7 +87,19 @@ export async function clean() {
 	await emptyDirectories(context);
 }
 
-export const dev = series(build, watch);
+export async function dev() {
+	const context = provideContext({
+		debug: true,
+	});
+
+	await buildWithContext(context);
+
+	const watcher = watchWithContext(context);
+
+	await executeWithContext(context);
+
+	watcher.close();
+}
 
 export async function encode() {
 	const context = provideContext({
@@ -80,32 +109,27 @@ export async function encode() {
 	await originalEncode(context);
 }
 
-export async function hotReload() {
-	const context = provideContext({
-		capture: true,
-	});
+export function execute() {
+	const context = provideContext({});
 
-	const demo = await provideDemo(context);
-
-	await updateShaders(context, demo);
+	return executeWithContext(context);
 }
 
 export async function showConfig() {
-	const context = provideContext({
-		capture: true,
-	});
+	const context = provideContext({});
+
 	console.log(context.config.get());
 }
 
 export function watch() {
-	const context = provideContext({
-		capture: false,
-	});
+	const context = provideContext({});
 
-	return originalWatch(
-		[join(context.config.get('directory'), '**', '*').replace(/\\/g, '/')],
-		hotReload
-	);
+	return watchWithContext(context);
 }
 
-export default build;
+export default async function() {
+	const context = provideContext({});
+
+	await buildWithContext(context);
+	await executeWithContext(context);
+}
