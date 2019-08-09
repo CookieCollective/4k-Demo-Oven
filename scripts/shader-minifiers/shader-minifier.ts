@@ -10,7 +10,14 @@ export class ShaderMinifierShaderMinifier implements IShaderMinifier {
 
 	constructor(config: Provider) {
 		this.config = config;
+	}
+
+	checkConfig() {
 		this.config.required(['tools:shader-minifier']);
+
+		if (process.platform !== 'win32') {
+			this.config.required(['tools:mono']);
+		}
 	}
 
 	async minify(definition: IShaderDefinition) {
@@ -116,7 +123,6 @@ export class ShaderMinifierShaderMinifier implements IShaderMinifier {
 		if (process.platform === 'win32') {
 			await spawn(shaderMinifierPath, args);
 		} else {
-			this.config.required(['tools:mono']);
 			args.unshift(shaderMinifierPath);
 			await spawn(this.config.get('tools:mono'), args);
 		}

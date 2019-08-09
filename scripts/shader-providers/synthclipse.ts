@@ -24,6 +24,10 @@ export class SynthclipseShaderProvider implements IShaderProvider {
 		};
 	}
 
+	checkConfig() {
+		this.config.required(['demo:shaderProvider:filename']);
+	}
+
 	async provide(definition: IShaderDefinition) {
 		const demoDirectory: string = this.config.get('directory');
 

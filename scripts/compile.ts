@@ -158,7 +158,7 @@ export async function compile(context: IContext) {
 						.map((filename) => '/I' + filename)
 						.concat(config.get('cl:args'))
 						.concat([
-							'/I' + config.get('tools:glew:include'),
+							'/I' + join(config.get('tools:glew'), 'include'),
 							'/Idemo',
 							'/FA',
 							'/Fa' + obj + '.asm',
@@ -179,7 +179,15 @@ export async function compile(context: IContext) {
 					'link',
 					config
 						.get('link:args')
-						.concat([config.get('tools:glew:lib')])
+						.concat([
+							join(
+								config.get('tools:glew'),
+								'lib',
+								'Release',
+								'Win32',
+								'glew32s.lib'
+							),
+						])
 						.concat(outArgs)
 			  )
 			: spawn(

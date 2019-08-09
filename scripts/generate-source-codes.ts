@@ -276,7 +276,7 @@ export async function writeDemoGl(context: IContext) {
 	addFromConfig('demo:gl:functions', addGlFunctionName);
 
 	const glewContents = await readFile(
-		join(context.config.get('tools:glew:include'), 'GL', 'glew.h'),
+		join(context.config.get('tools:glew'), 'include', 'GL', 'glew.h'),
 		'utf8'
 	);
 

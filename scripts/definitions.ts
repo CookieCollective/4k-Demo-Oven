@@ -68,10 +68,12 @@ export interface IShaderDefinition {
 
 export interface IShaderProvider {
 	getDefaultConfig(): object;
+	checkConfig(): void;
 	provide(definition: IShaderDefinition): Promise<void>;
 }
 
 export interface IShaderMinifier {
+	checkConfig(): void;
 	minify(definition: IShaderDefinition): Promise<void>;
 }
 
