@@ -1,6 +1,6 @@
 import { join, sep } from 'path';
 
-import { IConfig } from './definitions';
+import { IContext } from './definitions';
 import { spawn } from './lib';
 
 interface ISource {
@@ -13,7 +13,8 @@ interface ISources {
 	[objPath: string]: ISource;
 }
 
-export async function compile(config: IConfig) {
+export async function compile(context: IContext) {
+	const { config } = context;
 	const buildDirectory: string = config.get('paths:build');
 	const demoDirectory: string = config.get('directory');
 
@@ -28,7 +29,7 @@ export async function compile(config: IConfig) {
 			join(demoDirectory, 'config.yml'),
 			join(demoDirectory, 'config.local.yml'),
 		],
-		source: join('engine', 'main.cpp'),
+		source: join(buildDirectory, 'main.cpp'),
 	};
 
 	if (config.get('debug')) {
@@ -157,7 +158,6 @@ export async function compile(config: IConfig) {
 						.map((filename) => '/I' + filename)
 						.concat(config.get('cl:args'))
 						.concat([
-							'/I' + buildDirectory,
 							'/I' + config.get('tools:glew:include'),
 							'/Idemo',
 							'/FA',

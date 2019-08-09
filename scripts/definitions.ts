@@ -42,6 +42,12 @@ export interface IUniformArrays {
 	[type: string]: IUniformArray;
 }
 
+export interface IHooks {
+	declarations?: string;
+	initialize?: string;
+	render?: string;
+}
+
 export interface IShaderDefinition {
 	prologCode?: string;
 	attributesCode?: string;
@@ -64,8 +70,18 @@ export interface IShaderMinifier {
 	minify(definition: IShaderDefinition): Promise<void>;
 }
 
-export interface IConfig {
-	provideShaderDefinition(): Promise<Readonly<IShaderDefinition>>;
+export interface IDemoDefinition {
+	shader: IShaderDefinition;
+	hooks: IHooks;
+}
 
+export interface IConfig {
 	get(key?: string): any;
+}
+
+export interface IContext {
+	config: IConfig;
+
+	shaderProvider: IShaderProvider;
+	shaderMinifier?: IShaderMinifier;
 }

@@ -1,11 +1,10 @@
-//#include <demo-data.hpp>
+#include "../build/demo-data.hpp"
 
 #define SOUND_TEXTURE_SIZE 2048
 #define SAMPLE_RATE 44100
-#define MAX_SAMPLES (SOUND_TEXTURE_SIZE*SOUND_TEXTURE_SIZE*2)
+#define MAX_SAMPLES (SOUND_TEXTURE_SIZE * SOUND_TEXTURE_SIZE * 2)
 #define SAMPLE_TYPE float
 #define FLOAT_32BIT
-
 
 #ifdef CAPTURE
 

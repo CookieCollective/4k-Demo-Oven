@@ -1,14 +1,11 @@
 import { readFile, writeFile } from 'fs-extra';
 import { join } from 'path';
 
-import { IConfig, IShaderDefinition } from './definitions';
+import { IContext, IDemoDefinition } from './definitions';
 import { forEachMatch } from './lib';
 
-export async function writeDemoData(
-	config: IConfig,
-	definition: IShaderDefinition
-) {
-	const buildDirectory: string = config.get('paths:build');
+export async function writeDemoData(context: IContext, demo: IDemoDefinition) {
+	const buildDirectory: string = context.config.get('paths:build');
 
 	function escape(str: string) {
 		return str
@@ -19,13 +16,13 @@ export async function writeDemoData(
 
 	const fileContents = ['#pragma once', ''];
 
-	if (config.get('debug')) {
+	if (context.config.get('debug')) {
 		fileContents.push('#define DEBUG', '');
 
-		if (config.get('server')) {
+		if (context.config.get('server')) {
 			fileContents.push(
 				'#define SERVER',
-				`#define SERVER_PORT ${config.get('server:port')}`,
+				`#define SERVER_PORT ${context.config.get('server:port')}`,
 				''
 			);
 		}
@@ -33,8 +30,8 @@ export async function writeDemoData(
 
 	let debugDisplayUniformLocations = '';
 
-	Object.keys(definition.uniformArrays).forEach((type) => {
-		const uniformArray = definition.uniformArrays[type];
+	Object.keys(demo.shader.uniformArrays).forEach((type) => {
+		const uniformArray = demo.shader.uniformArrays[type];
 
 		const typeUpperCase = type.toUpperCase();
 		const nameMacro = `${typeUpperCase}_UNIFORM_NAME`;
@@ -66,28 +63,28 @@ export async function writeDemoData(
 		debugDisplayUniformLocations
 	);
 
-	let prologCode = definition.prologCode;
-	let commonCode = definition.commonCode;
+	let prologCode = demo.shader.prologCode;
+	let commonCode = demo.shader.commonCode;
 
 	const stageVariableRegExp = /\w+ [\w,]+;/g;
 	let vertexSpecificCode = '';
 	let fragmentSpecificCode = '';
 
-	if (definition.attributesCode) {
-		forEachMatch(stageVariableRegExp, definition.attributesCode, (match) => {
+	if (demo.shader.attributesCode) {
+		forEachMatch(stageVariableRegExp, demo.shader.attributesCode, (match) => {
 			vertexSpecificCode += 'in ' + match[0];
 		});
 	}
 
-	if (definition.varyingsCode) {
-		forEachMatch(stageVariableRegExp, definition.varyingsCode, (match) => {
+	if (demo.shader.varyingsCode) {
+		forEachMatch(stageVariableRegExp, demo.shader.varyingsCode, (match) => {
 			vertexSpecificCode += 'out ' + match[0];
 			fragmentSpecificCode += 'in ' + match[0];
 		});
 	}
 
-	if (definition.outputsCode) {
-		forEachMatch(stageVariableRegExp, definition.outputsCode, (match) => {
+	if (demo.shader.outputsCode) {
+		forEachMatch(stageVariableRegExp, demo.shader.outputsCode, (match) => {
 			fragmentSpecificCode += 'out ' + match[0];
 		});
 	}
@@ -133,10 +130,10 @@ export async function writeDemoData(
 		);
 	}
 
-	fileContents.push('#define PASS_COUNT ' + definition.passes.length);
+	fileContents.push('#define PASS_COUNT ' + demo.shader.passes.length);
 
 	fileContents.push('static const char *shaderPassCodes[] = {');
-	definition.passes.forEach((pass, index) => {
+	demo.shader.passes.forEach((pass, index) => {
 		if (pass.vertexCode) {
 			fileContents.push(
 				`#define HAS_SHADER_PASS_${index}_VERTEX_CODE`,
@@ -157,44 +154,44 @@ export async function writeDemoData(
 	});
 	fileContents.push('};', '');
 
-	if (config.get('demo:audio:tool') === 'shader') {
+	if (context.config.get('demo:audio:tool') === 'shader') {
 		fileContents.unshift(
 			'#include "audio-shader.cpp"',
 			'#define AUDIO_TEXTURE'
 		);
 	}
 
-	if (config.get('capture')) {
+	if (context.config.get('capture')) {
 		fileContents.push(
 			'#define CAPTURE',
-			'#define CAPTURE_FPS ' + config.get('capture:fps'),
+			'#define CAPTURE_FPS ' + context.config.get('capture:fps'),
 			'#define FORCE_RESOLUTION',
 			'static const constexpr int resolutionWidth = ' +
-				config.get('capture:width') +
+				context.config.get('capture:width') +
 				';',
 			'static const constexpr int resolutionHeight = ' +
-				config.get('capture:height') +
+				context.config.get('capture:height') +
 				';'
 		);
 	} else {
 		fileContents.push('static void captureFrame() {}');
 
 		if (
-			config.get('demo:resolution:width') > 0 &&
-			config.get('demo:resolution:height') > 0
+			context.config.get('demo:resolution:width') > 0 &&
+			context.config.get('demo:resolution:height') > 0
 		) {
 			fileContents.push(
 				'#define FORCE_RESOLUTION',
 				'static const constexpr int resolutionWidth = ' +
-					config.get('demo:resolution:width') +
+					context.config.get('demo:resolution:width') +
 					';',
 				'static const constexpr int resolutionHeight = ' +
-					config.get('demo:resolution:height') +
+					context.config.get('demo:resolution:height') +
 					';'
 			);
 		}
 
-		const scale = config.get('demo:resolution:scale');
+		const scale = context.config.get('demo:resolution:scale');
 		if (scale > 0 && scale !== 1) {
 			fileContents.push('#define SCALE_RESOLUTION ' + scale);
 		}
@@ -202,34 +199,26 @@ export async function writeDemoData(
 
 	fileContents.push('');
 
-	if (config.get('capture') || config.get('demo:closeWhenFinished')) {
+	if (
+		context.config.get('capture') ||
+		context.config.get('demo:closeWhenFinished')
+	) {
 		fileContents.push('#define CLOSE_WHEN_FINISHED', '');
 	}
 
-	if (config.get('demo:loadingBlackScreen')) {
+	if (context.config.get('demo:loadingBlackScreen')) {
 		fileContents.push('#define LOADING_BLACK_SCREEN', '');
 	}
 
-	async function addHook(name: string) {
-		try {
-			const hook = (await readFile(
-				join(config.get('directory'), config.get('demo:hooks:' + name)),
-				'utf8'
-			))
-				.replace(/\r/g, '')
-				.replace(/\s*\/\/.*$/gm, '')
-				.replace(/$/gm, ' \\');
-			fileContents.push(`#define HOOK_${name.toUpperCase()} \\`, hook, '');
-		} catch (err) {
-			if (err.code !== 'ENOENT') {
-				throw err;
-			}
+	function addHook(macroName: string, code?: string) {
+		if (code) {
+			fileContents.push(`#define HAS_HOOK_${macroName}`);
 		}
 	}
 
-	await addHook('declarations');
-	await addHook('initialize');
-	await addHook('render');
+	addHook('DECLARATIONS', demo.hooks.declarations);
+	addHook('INITIALIZE', demo.hooks.initialize);
+	addHook('RENDER', demo.hooks.render);
 
 	await writeFile(
 		join(buildDirectory, 'demo-data.hpp'),
@@ -237,7 +226,7 @@ export async function writeDemoData(
 	);
 }
 
-export async function writeDemoGl(config: IConfig) {
+export async function writeDemoGl(context: IContext) {
 	const fileContents = [
 		'#pragma once',
 		'',
@@ -277,7 +266,7 @@ export async function writeDemoGl(config: IConfig) {
 	}
 
 	function addFromConfig(key: string, action: (name: string) => void) {
-		const value = config.get(key);
+		const value = context.config.get(key);
 		if (Array.isArray(value)) {
 			value.forEach(action);
 		}
@@ -287,7 +276,7 @@ export async function writeDemoGl(config: IConfig) {
 	addFromConfig('demo:gl:functions', addGlFunctionName);
 
 	const glewContents = await readFile(
-		join(config.get('tools:glew:include'), 'GL', 'glew.h'),
+		join(context.config.get('tools:glew:include'), 'GL', 'glew.h'),
 		'utf8'
 	);
 
@@ -330,7 +319,28 @@ export async function writeDemoGl(config: IConfig) {
 		''
 	);
 
-	const buildDirectory: string = config.get('paths:build');
+	const buildDirectory: string = context.config.get('paths:build');
 
 	await writeFile(join(buildDirectory, 'demo-gl.hpp'), fileContents.join('\n'));
+}
+
+export async function writeDemoMain(context: IContext, demo: IDemoDefinition) {
+	const buildDirectory: string = context.config.get('paths:build');
+
+	let mainCode = await readFile(join('engine', 'main-template.cpp'), 'utf8');
+
+	function addHook(macroName: string, code?: string) {
+		if (code) {
+			mainCode = mainCode.replace(
+				new RegExp(`\\bREPLACE_HOOK_${macroName}`, 'g'),
+				code
+			);
+		}
+	}
+
+	addHook('DECLARATIONS', demo.hooks.declarations);
+	addHook('INITIALIZE', demo.hooks.initialize);
+	addHook('RENDER', demo.hooks.render);
+
+	await writeFile(join(buildDirectory, 'main.cpp'), mainCode);
 }

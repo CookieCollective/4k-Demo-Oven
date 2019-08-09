@@ -1,10 +1,11 @@
 import { emptyDir } from 'fs-extra';
 import { join, resolve } from 'path';
 
-import { IConfig } from './definitions';
+import { IContext } from './definitions';
 import { spawn } from './lib';
 
-export async function spawnCapture(config: IConfig) {
+export async function spawnCapture(context: IContext) {
+	const { config } = context;
 	const framesDirectory = config.get('paths:frames');
 
 	await emptyDir(framesDirectory);
@@ -14,7 +15,8 @@ export async function spawnCapture(config: IConfig) {
 	});
 }
 
-export async function encode(config: IConfig) {
+export async function encode(context: IContext) {
+	const { config } = context;
 	const framesDirectory = config.get('paths:frames');
 
 	const args = [

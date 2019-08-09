@@ -3,101 +3,107 @@ import { join, resolve } from 'path';
 
 import { encode as originalEncode, spawnCapture } from './capture';
 import { compile } from './compile';
-import { getConfig } from './config';
-import { IConfig } from './definitions';
-import { writeDemoData, writeDemoGl } from './generate-source-codes';
+import { provideContext } from './context';
+import { IContext } from './definitions';
+import { provideDemo } from './demo';
+import {
+	writeDemoData,
+	writeDemoGl,
+	writeDemoMain,
+} from './generate-source-codes';
 import { updateShaders } from './hot-reload';
 import { emptyDirectories, spawn } from './lib';
 import { Monitor } from './monitor';
 import { zip } from './zip';
 
-async function internalBuild(config: IConfig) {
-	await emptyDirectories(config);
+async function internalBuild(context: IContext) {
+	await emptyDirectories(context);
 
-	const shaderDefinition = await config.provideShaderDefinition();
+	const demo = await provideDemo(context);
 
-	await writeDemoData(config, shaderDefinition);
-	await writeDemoGl(config);
+	await writeDemoData(context, demo);
+	await writeDemoGl(context);
+	await writeDemoMain(context, demo);
 
-	await compile(config);
+	await compile(context);
 }
 
 export async function build() {
-	const config = getConfig({
+	const context = provideContext({
 		capture: false,
 	});
 
-	const monitor = new Monitor(config);
+	const monitor = new Monitor(context);
 
 	await monitor.run(async () => {
-		await internalBuild(config);
+		await internalBuild(context);
 
 		await monitor.notifySuccess();
 
-		if (config.get('execute')) {
-			await spawn(resolve(config.get('paths:exe')), []);
+		if (context.config.get('execute')) {
+			await spawn(resolve(context.config.get('paths:exe')), []);
 		}
 
-		if (config.get('zip')) {
-			await zip(config);
+		if (context.config.get('zip')) {
+			await zip(context);
 		}
 	});
 }
 
 export async function capture() {
-	const config = getConfig({
+	const context = provideContext({
 		capture: true,
 	});
 
-	await internalBuild(config);
+	await internalBuild(context);
 
-	await spawnCapture(config);
+	await spawnCapture(context);
 
-	await originalEncode(config);
+	await originalEncode(context);
 }
 
 export async function clean() {
-	const config = getConfig({
+	const context = provideContext({
 		capture: true,
 	});
 
-	await emptyDirectories(config);
+	await emptyDirectories(context);
 }
 
 export const dev = series(build, watch);
 
 export async function encode() {
-	const config = getConfig({
+	const context = provideContext({
 		capture: true,
 	});
 
-	await originalEncode(config);
+	await originalEncode(context);
 }
 
 export async function hotReload() {
-	const config = getConfig({
+	const context = provideContext({
 		capture: true,
 	});
 
-	const shaderDefinition = await config.provideShaderDefinition();
+	const demo = await provideDemo(context);
 
-	await updateShaders(config, shaderDefinition);
+	await updateShaders(context, demo);
 }
 
 export async function showConfig() {
-	const config = getConfig({
+	const context = provideContext({
 		capture: true,
 	});
-	console.log(config.get());
+	console.log(context.config.get());
 }
 
 export function watch() {
-	const config = getConfig({
+	const context = provideContext({
 		capture: false,
 	});
 
 	return originalWatch(
-		[join(config.get('directory'), '**', '*').replace(/\\/g, '/')],
+		[join(context.config.get('directory'), '**', '*').replace(/\\/g, '/')],
 		hotReload
 	);
 }

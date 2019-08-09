@@ -4,12 +4,12 @@ import {
 } from 'child_process';
 import { emptyDir } from 'fs-extra';
 
-import { IConfig } from './definitions';
+import { IContext } from './definitions';
 
-export function emptyDirectories(config: IConfig) {
+export function emptyDirectories(context: IContext) {
 	return Promise.all(
-		[config.get('paths:build'), config.get('paths:dist')].map((path) =>
-			emptyDir(path)
+		[context.config.get('paths:build'), context.config.get('paths:dist')].map(
+			(path) => emptyDir(path)
 		)
 	);
 }

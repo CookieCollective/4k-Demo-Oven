@@ -2,7 +2,7 @@
 
 // Audio backends shall implement this interface.
 
-#include <demo-data.hpp>
+#include "../build/demo-data.hpp"
 
 #ifdef CAPTURE
 

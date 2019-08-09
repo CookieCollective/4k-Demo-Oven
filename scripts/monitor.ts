@@ -2,15 +2,15 @@ import { stat } from 'fs-extra';
 import * as notifier from 'node-notifier';
 import { dirname, resolve } from 'path';
 
-import { IConfig } from './definitions';
+import { IContext } from './definitions';
 import { spawn } from './lib';
 
 export class Monitor {
-	private config: IConfig;
+	private context: IContext;
 	private size: number = -1;
 
-	constructor(config: IConfig) {
-		this.config = config;
+	constructor(context: IContext) {
+		this.context = context;
 	}
 
 	async run(callback: () => Promise<void>) {
@@ -30,7 +30,7 @@ export class Monitor {
 			console.error('Build failed.');
 			console.error(err);
 
-			if (this.config.get('notify')) {
+			if (this.context.config.get('notify')) {
 				notifier.notify({
 					message: err.toString(),
 					title: 'Build failed.',
@@ -40,12 +40,12 @@ export class Monitor {
 	}
 
 	async notifySuccess() {
-		const exePath = this.config.get('paths:exe');
+		const exePath = this.context.config.get('paths:exe');
 
 		const stats = await stat(exePath);
 		this.size = stats.size;
 
-		if (this.config.get('notify')) {
+		if (this.context.config.get('notify')) {
 			notifier.notify({
 				message: this.size + ' bytes.',
 				title: 'Build successful.',

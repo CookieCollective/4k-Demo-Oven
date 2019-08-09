@@ -1,4 +1,4 @@
-#include <demo-data.hpp>
+#include "../build/demo-data.hpp"
 
 #ifdef CAPTURE
 

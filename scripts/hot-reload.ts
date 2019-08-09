@@ -1,13 +1,10 @@
 import * as request from 'request-promise-native';
 
-import { IConfig, IShaderDefinition } from './definitions';
+import { IContext, IDemoDefinition } from './definitions';
 import { forEachMatch } from './lib';
 
-export async function updateShaders(
-	config: IConfig,
-	definition: IShaderDefinition
-) {
-	const baseUrl = `http://localhost:${config.get('server:port')}/`;
+export async function updateShaders(context: IContext, demo: IDemoDefinition) {
+	const baseUrl = `http://localhost:${context.config.get('server:port')}/`;
 
 	const requests: request.RequestPromise[] = [];
 
@@ -27,35 +24,35 @@ export async function updateShaders(
 	let vertexSpecificCode = '';
 	let fragmentSpecificCode = '';
 
-	if (definition.attributesCode) {
-		forEachMatch(stageVariableRegExp, definition.attributesCode, (match) => {
+	if (demo.shader.attributesCode) {
+		forEachMatch(stageVariableRegExp, demo.shader.attributesCode, (match) => {
 			vertexSpecificCode += 'in ' + match[0];
 		});
 	}
 
-	if (definition.varyingsCode) {
-		forEachMatch(stageVariableRegExp, definition.varyingsCode, (match) => {
+	if (demo.shader.varyingsCode) {
+		forEachMatch(stageVariableRegExp, demo.shader.varyingsCode, (match) => {
 			vertexSpecificCode += 'out ' + match[0];
 			fragmentSpecificCode += 'in ' + match[0];
 		});
 	}
 
-	if (definition.outputsCode) {
-		forEachMatch(stageVariableRegExp, definition.outputsCode, (match) => {
+	if (demo.shader.outputsCode) {
+		forEachMatch(stageVariableRegExp, demo.shader.outputsCode, (match) => {
 			fragmentSpecificCode += 'out ' + match[0];
 		});
 	}
 
-	definition.passes.forEach((pass, passIndex) => {
+	demo.shader.passes.forEach((pass, passIndex) => {
 		if (pass.vertexCode) {
 			let code = '';
 
-			if (definition.prologCode) {
-				code += definition.prologCode;
+			if (demo.shader.prologCode) {
+				code += demo.shader.prologCode;
 			}
 
 			code += vertexSpecificCode;
-			code += definition.commonCode;
+			code += demo.shader.commonCode;
 			code += pass.vertexCode;
 
 			addRequest(passIndex, 'vertex', code);
@@ -64,12 +61,12 @@ export async function updateShaders(
 		if (pass.fragmentCode) {
 			let code = '';
 
-			if (definition.prologCode) {
-				code += definition.prologCode;
+			if (demo.shader.prologCode) {
+				code += demo.shader.prologCode;
 			}
 
 			code += fragmentSpecificCode;
-			code += definition.commonCode;
+			code += demo.shader.commonCode;
 			code += pass.fragmentCode;
 
 			addRequest(passIndex, 'fragment', code);

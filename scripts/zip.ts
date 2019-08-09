@@ -1,10 +1,11 @@
 import { pathExists, remove, stat } from 'fs-extra';
 import { join, resolve } from 'path';
 
-import { IConfig } from './definitions';
+import { IContext } from './definitions';
 import { spawn } from './lib';
 
-export async function zip(config: IConfig) {
+export async function zip(context: IContext) {
+	const { config } = context;
 	const szip = config.get('tools:7z');
 	const distDirectory = config.get('paths:dist');
 	const zipPath = resolve(distDirectory, config.get('demo:name') + '.zip');

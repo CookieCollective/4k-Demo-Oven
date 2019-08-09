@@ -2,18 +2,18 @@
 #define WIN32_EXTRA_LEAN
 #include <windows.h>
 
-#include "demo.hpp"
+#include "../engine/demo.hpp"
 
-#include "debug.hpp"
-#include "definitions.hpp"
-#include "window.hpp"
+#include "../engine/debug.hpp"
+#include "../engine/definitions.hpp"
+#include "../engine/window.hpp"
 
 #ifdef SERVER
-#include "server.hpp"
+#include "../engine/server.hpp"
 #endif
 
-#ifdef HOOK_DECLARATIONS
-HOOK_DECLARATIONS
+#ifdef HAS_HOOK_DECLARATIONS
+REPLACE_HOOK_DECLARATIONS
 #endif
 
 void main()
@@ -227,8 +227,8 @@ void main()
 	serverStart(startServerOptions);
 #endif
 
-#ifdef HOOK_INITIALIZE
-	HOOK_INITIALIZE
+#ifdef HAS_HOOK_INITIALIZE
+	REPLACE_HOOK_INITIALIZE
 #endif
 
 	audioStart();
@@ -244,8 +244,8 @@ void main()
 		uniformTime = time;
 #endif
 
-#ifdef HOOK_RENDER
-		HOOK_RENDER
+#ifdef HAS_HOOK_RENDER
+		REPLACE_HOOK_RENDER
 #else
 		glUniform1fv(0, FLOAT_UNIFORM_COUNT, floatUniforms);
 		checkGLError();

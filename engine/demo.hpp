@@ -1,6 +1,6 @@
 #pragma once
 
-#include <demo-data.hpp>
+#include "../build/demo-data.hpp"
 
 #ifdef DEBUG
 
@@ -20,7 +20,7 @@
 
 #else
 
-#include <demo-gl.hpp>
+#include "../build/demo-gl.hpp"
 
 #define loadGLFunctions() \
 	for (auto i = 0; i < GL_EXT_FUNCTION_COUNT; ++i) \
