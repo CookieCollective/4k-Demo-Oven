@@ -1,3 +1,26 @@
+#pragma hook declarations
+
+#pragma data_seg(".var")
+static GLuint vbo, vao;
+
+static const constexpr int count = 100;
+static const constexpr int sliceX = 100;
+static const constexpr int sliceY = 1;
+static const constexpr int faceX = sliceX + 1;
+static const constexpr int faceY = sliceY + 1;
+static const constexpr int indiceCount = count * ((faceX + 2) * faceY);		// count * line (+2 obfuscated triangle) * row
+static const constexpr int vertexCount = count * (faceX * faceY) * (3 + 2); // count * line * row * (x,y,z + u,v)
+
+static GLfloat vertices[vertexCount];
+static int indices[indiceCount];
+
+static const constexpr int textureCount = 1;
+static GLuint textureIds[textureCount];
+
+static unsigned int fbo;
+
+#pragma hook initialize
+
 int i = 0;
 for (int index = 0; index < count; ++index)
 {
@@ -65,4 +88,60 @@ for (i = 0; i < textureCount; i++)
 }
 
 glGenFramebuffers(1, &fbo);
+checkGLError();
+
+#pragma hook render
+
+uniformTime = time;
+
+// Pass 0
+
+glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+checkGLError();
+
+glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureIds[0], 0);
+checkGLError();
+
+glUseProgram(programs[0]);
+checkGLError();
+
+glUniform1fv(0, FLOAT_UNIFORM_COUNT, floatUniforms);
+checkGLError();
+
+glClear(GL_COLOR_BUFFER_BIT); // | GL_DEPTH_BUFFER_BIT);
+checkGLError();
+
+glEnable(GL_BLEND);
+checkGLError();
+
+glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+checkGLError();
+
+glBindVertexArray(vao);
+checkGLError();
+
+glDrawElements(GL_TRIANGLE_STRIP, indiceCount, GL_UNSIGNED_INT, indices);
+checkGLError();
+
+// Pass 1
+
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
+checkGLError();
+
+glUseProgram(programs[1]);
+checkGLError();
+
+glUniform1fv(0, FLOAT_UNIFORM_COUNT, floatUniforms);
+checkGLError();
+
+glActiveTexture(GL_TEXTURE0 + 0);
+checkGLError();
+
+glBindTexture(GL_TEXTURE_2D, textureIds[0]);
+checkGLError();
+
+glUniform1i(3, 0);
+checkGLError();
+
+glRects(-1, -1, 1, 1);
 checkGLError();

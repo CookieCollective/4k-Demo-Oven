@@ -12,6 +12,10 @@ export class ShaderMinifierShaderMinifier implements IShaderMinifier {
 		this.config = config;
 	}
 
+	getDefaultConfig() {
+		return {};
+	}
+
 	checkConfig() {
 		this.config.required(['tools:shader-minifier']);
 

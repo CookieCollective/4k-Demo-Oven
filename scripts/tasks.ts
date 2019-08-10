@@ -2,7 +2,7 @@ import { watch as originalWatch } from 'gulp';
 import { join, resolve } from 'path';
 
 import { encode as originalEncode, spawnCapture } from './capture';
-import { compile } from './compile';
+import { compile } from './compilation';
 import { provideContext } from './context';
 import { IContext } from './definitions';
 import { provideDemo } from './demo';
@@ -25,7 +25,7 @@ async function buildDemo(context: IContext) {
 	await writeDemoGl(context);
 	await writeDemoMain(context, demo);
 
-	await compile(context);
+	await compile(context, demo);
 }
 
 async function buildWithContext(context: IContext) {

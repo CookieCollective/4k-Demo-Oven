@@ -2,7 +2,13 @@ import { pathExistsSync, statSync } from 'fs-extra';
 import { Provider } from 'nconf';
 import * as yaml from 'nconf-yaml';
 import { dirname, join } from 'path';
+
+import { VierKlangAudioSynthesizer } from './audio-synthesizers/4klang';
+import { AchtKlangAudioSynthesizer } from './audio-synthesizers/8klang';
+import { OidosAudioSynthesizer } from './audio-synthesizers/oidos';
+import { RealtimeFramerateAudioSynthesizer } from './audio-synthesizers/realtime-framerate';
 import {
+	IAudioSynthesizer,
 	IContext,
 	IContextOptions,
 	IShaderMinifier,
@@ -24,37 +30,32 @@ export function provideContext(options: IContextOptions): IContext {
 			debug: {
 				alias: 'd',
 				default: typeof options.debug !== 'undefined' ? options.debug : false,
-				describe: 'Compile a debugging version.',
 				type: 'boolean',
 			},
 			directory: {
 				alias: 'dir',
 				default: 'demo',
-				describe: 'Home of your demo-specific files.',
 				type: 'string',
 			},
 			minify: {
 				alias: 'm',
 				default: true,
-				describe: 'Minify shader.',
 				type: 'boolean',
 			},
 			notify: {
 				alias: 'n',
 				default: false,
-				describe: 'Display a notification when build ends.',
 				type: 'boolean',
 			},
 			server: {
 				alias: 's',
 				default: true,
-				describe: 'Create a server for hot reloading.',
 				type: 'boolean',
 			},
 			zip: {
 				alias: 'z',
 				default: false,
-				describe: 'Zip the exe after a successful build.',
+				describe: '',
 				type: 'boolean',
 			},
 		});
@@ -84,14 +85,33 @@ export function provideContext(options: IContextOptions): IContext {
 			format: yaml,
 		});
 
-	let demoAudio = null;
+	if (
+		config.get('demo:resolution:width') > 0 &&
+		config.get('demo:resolution:height') > 0
+	) {
+		config.set('forceResolution', true);
+	}
 
-	switch (config.get('demo:audio:tool')) {
-		case 'oidos':
-			demoAudio = {
-				filename: 'music.xrns',
-			};
+	let audioSynthesizer: IAudioSynthesizer;
+	switch (config.get('demo:audioSynthesizer:tool') || 'none') {
+		case '4klang':
+			audioSynthesizer = new VierKlangAudioSynthesizer(config);
 			break;
+
+		case '8klang':
+			audioSynthesizer = new AchtKlangAudioSynthesizer(config);
+			break;
+
+		case 'none':
+			audioSynthesizer = new RealtimeFramerateAudioSynthesizer(config);
+			break;
+
+		case 'oidos':
+			audioSynthesizer = new OidosAudioSynthesizer(config);
+			break;
+
+		default:
+			throw new Error('Config key "demo:audioSynthesizer:tool" is not valid.');
 	}
 
 	if (options.capture) {
@@ -104,13 +124,6 @@ export function provideContext(options: IContextOptions): IContext {
 		});
 
 		config.set('forceResolution', true);
-	} else {
-		if (
-			config.get('demo:resolution:width') > 0 &&
-			config.get('demo:resolution:height') > 0
-		) {
-			config.set('forceResolution', true);
-		}
 	}
 
 	let shaderProvider: IShaderProvider;
@@ -161,22 +174,16 @@ export function provideContext(options: IContextOptions): IContext {
 			],
 		},
 		demo: {
-			audio: Object.assign(
-				{
-					tool: 'none', // in 4klang, 8klang, none, oidos, shader
-				},
-				demoAudio
+			audioSynthesizer: Object.assign(
+				{},
+				audioSynthesizer && audioSynthesizer.getDefaultConfig()
 			),
 			closeWhenFinished: false,
 			gl: {
 				constants: [],
 				functions: [],
 			},
-			hooks: {
-				declarations: 'declarations.cpp',
-				initialize: 'initialize.cpp',
-				render: 'render.cpp',
-			},
+			hooks: 'hooks.cpp',
 			loadingBlackScreen: false,
 			// name
 			resolution: {
@@ -184,12 +191,11 @@ export function provideContext(options: IContextOptions): IContext {
 				// scale
 				// width
 			},
-			shaderProvider: Object.assign(
-				{
-					tool: 'none', // in none, synthclipse
-				},
-				shaderProvider.getDefaultConfig()
+			shaderMinifier: Object.assign(
+				{},
+				shaderMinifier && shaderMinifier.getDefaultConfig()
 			),
+			shaderProvider: Object.assign({}, shaderProvider.getDefaultConfig()),
 		},
 		link: {
 			args: [
@@ -234,7 +240,7 @@ export function provideContext(options: IContextOptions): IContext {
 		'demo:name',
 		'paths:build',
 		'paths:exe',
-		'tools:glew:include',
+		'tools:glew',
 	]);
 
 	if (options.capture) {
@@ -247,33 +253,22 @@ export function provideContext(options: IContextOptions): IContext {
 		config.required(['crinkler:args', 'tools:crinkler']);
 	}
 
-	if (
-		['4klang', '8klang', 'none', 'oidos', 'shader'].indexOf(
-			config.get('demo:audio:tool')
-		) === -1
-	) {
-		throw new Error('Config key "demo:audio:tool" is not valid.');
-	}
-
-	switch (config.get('demo:audio:tool')) {
-		case '4klang':
-			config.required(['tools:4klang']);
-			break;
-
-		case '8klang':
-			config.required(['tools:8klang']);
-			break;
-
-		case 'oidos':
-			config.required(['tools:oidos', 'tools:python2']);
-			break;
-	}
-
 	if (config.get('zip')) {
 		config.required(['tools:7z']);
 	}
 
+	if (audioSynthesizer) {
+		audioSynthesizer.checkConfig();
+	}
+
+	shaderProvider.checkConfig();
+
+	if (shaderMinifier) {
+		shaderMinifier.checkConfig();
+	}
+
 	return {
+		audioSynthesizer,
 		config,
 		shaderMinifier,
 		shaderProvider,

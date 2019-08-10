@@ -72,7 +72,7 @@ export class SimpleShaderProvider implements IShaderProvider {
 			}
 		}
 
-		const partsRegExp = /#pragma\s+(.+)\s+$/gm;
+		const partsRegExp = /^#pragma\s+(.+)\s+$/gm;
 		forEachMatch(partsRegExp, shaderContents, (match) => {
 			function innerTakePart(newPartAction: IPartAction) {
 				takePart(match.index);

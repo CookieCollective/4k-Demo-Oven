@@ -48,9 +48,7 @@ export interface IUniformArrays {
 }
 
 export interface IHooks {
-	declarations?: string;
-	initialize?: string;
-	render?: string;
+	[type: string]: string;
 }
 
 export interface IShaderDefinition {
@@ -66,6 +64,45 @@ export interface IShaderDefinition {
 	variables: Variable[];
 }
 
+export interface ISource {
+	dependencies?: string[];
+	includes?: string[];
+	source: string;
+}
+
+export interface ISources {
+	[objPath: string]: ISource;
+}
+
+export interface IAsmCompilationDefinition {
+	nasmArgs: string[];
+	includePaths: string[];
+
+	sources: ISources;
+}
+
+export interface ICppCompilationDefinition {
+	clArgs: string[];
+
+	hooks: IHooks;
+
+	sources: ISources;
+}
+
+export interface ICompilationDefinition {
+	asm: IAsmCompilationDefinition;
+	cpp: ICppCompilationDefinition;
+
+	crinklerArgs: string[];
+	linkArgs: string[];
+}
+
+export interface IAudioSynthesizer {
+	getDefaultConfig(): object;
+	checkConfig(): void;
+	addToCompilation(compilation: ICompilationDefinition): Promise<void>;
+}
+
 export interface IShaderProvider {
 	getDefaultConfig(): object;
 	checkConfig(): void;
@@ -73,13 +110,14 @@ export interface IShaderProvider {
 }
 
 export interface IShaderMinifier {
+	getDefaultConfig(): object;
 	checkConfig(): void;
 	minify(definition: IShaderDefinition): Promise<void>;
 }
 
 export interface IDemoDefinition {
 	shader: IShaderDefinition;
-	hooks: IHooks;
+	compilation: ICompilationDefinition;
 }
 
 export interface IConfig {
@@ -89,6 +127,7 @@ export interface IConfig {
 export interface IContext {
 	config: IConfig;
 
+	audioSynthesizer?: IAudioSynthesizer;
 	shaderProvider: IShaderProvider;
 	shaderMinifier?: IShaderMinifier;
 }

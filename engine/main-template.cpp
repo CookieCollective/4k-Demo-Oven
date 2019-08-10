@@ -5,7 +5,6 @@
 #include "../engine/demo.hpp"
 
 #include "../engine/debug.hpp"
-#include "../engine/definitions.hpp"
 #include "../engine/window.hpp"
 
 #ifdef SERVER
@@ -16,6 +15,7 @@
 REPLACE_HOOK_DECLARATIONS
 #endif
 
+#pragma code_seg(".main")
 void main()
 {
 #ifndef FORCE_RESOLUTION
@@ -231,22 +231,30 @@ void main()
 	REPLACE_HOOK_INITIALIZE
 #endif
 
-	audioStart();
+#if !defined(CAPTURE) && defined(HAS_HOOK_AUDIO_START)
+	REPLACE_HOOK_AUDIO_START
+#endif
 
 	do
 	{
 		// Avoid 'not responding' system messages.
 		PeekMessage(NULL, NULL, 0, 0, PM_REMOVE);
 
-		float time = audioGetTime();
-
-#ifdef uniformTime
-		uniformTime = time;
+#ifdef HAS_HOOK_TIME
+		REPLACE_HOOK_TIME
+#elif defined(HAS_HOOK_CAPTURE_TIME)
+		REPLACE_HOOK_CAPTURE_TIME
+#elif defined(HAS_HOOK_AUDIO_TIME)
+		REPLACE_HOOK_AUDIO_TIME
 #endif
 
 #ifdef HAS_HOOK_RENDER
 		REPLACE_HOOK_RENDER
 #else
+#ifdef uniformTime
+		uniformTime = time;
+#endif
+
 		glUniform1fv(0, FLOAT_UNIFORM_COUNT, floatUniforms);
 		checkGLError();
 
@@ -254,7 +262,9 @@ void main()
 		checkGLError();
 #endif
 
-		captureFrame();
+#ifdef HAS_HOOK_CAPTURE_FRAME
+		REPLACE_HOOK_CAPTURE_FRAME
+#endif
 
 #ifdef SERVER
 		serverUpdate();
@@ -262,8 +272,17 @@ void main()
 
 		wglSwapLayerBuffers(hdc, WGL_SWAP_MAIN_PLANE);
 	} while (
-#ifdef CLOSE_WHEN_FINISHED
-		!audioIsFinished() &&
+#if defined(CLOSE_WHEN_FINISHED)
+#ifdef DURATION
+		time <= DURATION
+#elif defined(HAS_HOOK_CAPTURE_IS_PLAYING)
+		REPLACE_HOOK_CAPTURE_IS_PLAYING
+#elif defined(HAS_HOOK_AUDIO_IS_PLAYING)
+		REPLACE_HOOK_AUDIO_IS_PLAYING
+#else
+#error
+#endif
+		&&
 #endif
 		!GetAsyncKeyState(VK_ESCAPE));
 

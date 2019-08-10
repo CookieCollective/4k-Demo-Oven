@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'fs-extra';
 import { join } from 'path';
 
 import { IContext, IDemoDefinition } from './definitions';
+import { replaceHooks } from './hooks';
 import { forEachMatch } from './lib';
 
 export async function writeDemoData(context: IContext, demo: IDemoDefinition) {
@@ -154,7 +155,7 @@ export async function writeDemoData(context: IContext, demo: IDemoDefinition) {
 	});
 	fileContents.push('};', '');
 
-	if (context.config.get('demo:audio:tool') === 'shader') {
+	if (context.config.get('demo:audioSynthesizer:tool') === 'shader') {
 		fileContents.unshift(
 			'#include "audio-shader.cpp"',
 			'#define AUDIO_TEXTURE'
@@ -199,7 +200,13 @@ export async function writeDemoData(context: IContext, demo: IDemoDefinition) {
 
 	fileContents.push('');
 
+	const duration = context.config.get('demo:duration');
+	if (duration) {
+		fileContents.push(`#define DURATION ${duration}`, '');
+	}
+
 	if (
+		duration ||
 		context.config.get('capture') ||
 		context.config.get('demo:closeWhenFinished')
 	) {
@@ -210,15 +217,9 @@ export async function writeDemoData(context: IContext, demo: IDemoDefinition) {
 		fileContents.push('#define LOADING_BLACK_SCREEN', '');
 	}
 
-	function addHook(macroName: string, code?: string) {
-		if (code) {
-			fileContents.push(`#define HAS_HOOK_${macroName}`);
-		}
-	}
-
-	addHook('DECLARATIONS', demo.hooks.declarations);
-	addHook('INITIALIZE', demo.hooks.initialize);
-	addHook('RENDER', demo.hooks.render);
+	Object.keys(demo.compilation.cpp.hooks).forEach((hookName) => {
+		fileContents.push(`#define HAS_HOOK_${hookName.toUpperCase()}`);
+	});
 
 	await writeFile(
 		join(buildDirectory, 'demo-data.hpp'),
@@ -329,18 +330,7 @@ export async function writeDemoMain(context: IContext, demo: IDemoDefinition) {
 
 	let mainCode = await readFile(join('engine', 'main-template.cpp'), 'utf8');
 
-	function addHook(macroName: string, code?: string) {
-		if (code) {
-			mainCode = mainCode.replace(
-				new RegExp(`\\bREPLACE_HOOK_${macroName}`, 'g'),
-				code
-			);
-		}
-	}
-
-	addHook('DECLARATIONS', demo.hooks.declarations);
-	addHook('INITIALIZE', demo.hooks.initialize);
-	addHook('RENDER', demo.hooks.render);
+	mainCode = replaceHooks(demo.compilation.cpp.hooks, mainCode);
 
 	await writeFile(join(buildDirectory, 'main.cpp'), mainCode);
 }

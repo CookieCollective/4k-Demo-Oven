@@ -1,17 +1,19 @@
-import { readFile } from 'fs-extra';
 import { join } from 'path';
 
 import {
+	ICompilationDefinition,
 	IContext,
 	IDemoDefinition,
-	IHooks,
 	IShaderDefinition,
 	Variable,
 } from './definitions';
+import { addHooks } from './hooks';
 import { addConstant } from './variables';
 
 export async function provideDemo(context: IContext): Promise<IDemoDefinition> {
 	const { config } = context;
+	const buildDirectory: string = config.get('paths:build');
+	const demoDirectory: string = config.get('directory');
 
 	const variables: Variable[] = [];
 
@@ -213,29 +215,64 @@ export async function provideDemo(context: IContext): Promise<IDemoDefinition> {
 			)
 			.join('') + shader.commonCode;
 
-	async function addHook(name: string) {
-		try {
-			const hook = await readFile(
-				join(config.get('directory'), config.get('demo:hooks:' + name)),
-				'utf8'
-			);
-			return hook;
-		} catch (err) {
-			if (err.code !== 'ENOENT') {
-				throw err;
-			}
-		}
-		return undefined;
-	}
-
-	const hooks: IHooks = {
-		declarations: await addHook('declarations'),
-		initialize: await addHook('initialize'),
-		render: await addHook('render'),
+	const compilation: ICompilationDefinition = {
+		asm: {
+			includePaths: [],
+			nasmArgs: [],
+			sources: {},
+		},
+		cpp: {
+			clArgs: [],
+			hooks: {},
+			sources: {},
+		},
+		crinklerArgs: [],
+		linkArgs: [],
 	};
 
+	compilation.cpp.sources[join(buildDirectory, 'main.obj')] = {
+		dependencies: [
+			join(buildDirectory, 'demo-data.hpp'),
+			join(demoDirectory, 'config.yml'),
+			join(demoDirectory, 'config.local.yml'),
+		],
+		source: join(buildDirectory, 'main.cpp'),
+	};
+
+	if (config.get('debug')) {
+		compilation.cpp.sources[join(buildDirectory, 'debug.obj')] = {
+			source: join('engine', 'debug.cpp'),
+		};
+
+		if (config.get('server')) {
+			compilation.cpp.sources[join(buildDirectory, 'server.obj')] = {
+				source: join('engine', 'server.cpp'),
+			};
+			compilation.linkArgs.push('httpapi.lib');
+		}
+	}
+
+	if (config.get('capture')) {
+		await addHooks(compilation.cpp.hooks, join('engine', 'capture-hooks.cpp'));
+	}
+
+	if (context.audioSynthesizer) {
+		await context.audioSynthesizer.addToCompilation(compilation);
+	}
+
+	try {
+		await addHooks(
+			compilation.cpp.hooks,
+			join(config.get('directory'), config.get('demo:hooks'))
+		);
+	} catch (err) {
+		if (err.code !== 'ENOENT') {
+			throw err;
+		}
+	}
+
 	return {
-		hooks,
+		compilation,
 		shader,
 	};
 }
