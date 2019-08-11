@@ -6,7 +6,7 @@ import { dirname, join } from 'path';
 import { VierKlangAudioSynthesizer } from './audio-synthesizers/4klang';
 import { AchtKlangAudioSynthesizer } from './audio-synthesizers/8klang';
 import { OidosAudioSynthesizer } from './audio-synthesizers/oidos';
-import { RealtimeFramerateAudioSynthesizer } from './audio-synthesizers/realtime-framerate';
+import { RealtimeAudioSynthesizer } from './audio-synthesizers/realtime';
 import {
 	IAudioSynthesizer,
 	IContext,
@@ -92,8 +92,8 @@ export function provideContext(options: IContextOptions): IContext {
 		config.set('forceResolution', true);
 	}
 
-	let audioSynthesizer: IAudioSynthesizer;
-	switch (config.get('demo:audioSynthesizer:tool') || 'none') {
+	let audioSynthesizer: IAudioSynthesizer | undefined;
+	switch (config.get('demo:audioSynthesizer:tool') || 'realtime') {
 		case '4klang':
 			audioSynthesizer = new VierKlangAudioSynthesizer(config);
 			break;
@@ -103,11 +103,14 @@ export function provideContext(options: IContextOptions): IContext {
 			break;
 
 		case 'none':
-			audioSynthesizer = new RealtimeFramerateAudioSynthesizer(config);
 			break;
 
 		case 'oidos':
 			audioSynthesizer = new OidosAudioSynthesizer(config);
+			break;
+
+		case 'realtime':
+			audioSynthesizer = new RealtimeAudioSynthesizer();
 			break;
 
 		default:

@@ -1,0 +1,16 @@
+demo:
+  audioSynthesizer:
+    tool: none
+  gl:
+    constants:
+      - GL_COLOR_ATTACHMENT0
+      - GL_FRAMEBUFFER
+      - GL_RGBA32F
+      - GL_TEXTURE0
+    functions:
+      - glActiveTexture
+      - glBindFramebuffer
+      - glFramebufferTexture2D
+      - glGenFramebuffers
+      - glUniform1i
+  name: audio-shader
