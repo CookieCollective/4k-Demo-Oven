@@ -177,7 +177,7 @@ export function provideContext(options: IContextOptions): IContext {
 			],
 		},
 		demo: {
-			audioSynthesizer: Object.assign(
+			'audio-synthesizer': Object.assign(
 				{},
 				audioSynthesizer && audioSynthesizer.getDefaultConfig()
 			),
@@ -194,11 +194,11 @@ export function provideContext(options: IContextOptions): IContext {
 				// scale
 				// width
 			},
-			shaderMinifier: Object.assign(
+			'shader-minifier': Object.assign(
 				{},
 				shaderMinifier && shaderMinifier.getDefaultConfig()
 			),
-			shaderProvider: Object.assign({}, shaderProvider.getDefaultConfig()),
+			'shader-provider': Object.assign({}, shaderProvider.getDefaultConfig()),
 		},
 		link: {
 			args: [
