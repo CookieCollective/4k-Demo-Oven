@@ -1,6 +1,6 @@
 demo:
-  audioSynthesizer:
+  audio-synthesizer:
     tool: oidos
   name: oidos-synthclipse
-  shaderProvider:
+  shader-provider:
     tool: synthclipse

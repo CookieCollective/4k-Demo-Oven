@@ -12,7 +12,7 @@ export async function compile(context: IContext, demo: IDemoDefinition) {
 	let outArgs = ['/OUT:' + config.get('paths:exe')];
 
 	/*
-	switch (config.get('demo:audioSynthesizer:tool') || 'none') {
+	switch (config.get('demo:audio-synthesizer:tool') || 'none') {
 		case '4klang': {
 			compilation.asm.sources[join(buildDirectory, '4klang.obj')] = {
 				dependencies: [join(demoDirectory, '4klang.inc')],
@@ -52,7 +52,7 @@ export async function compile(context: IContext, demo: IDemoDefinition) {
 		case 'oidos': {
 			await spawn(config.get('tools:python2'), [
 				join(config.get('tools:oidos'), 'convert', 'OidosConvert.py'),
-				join(demoDirectory, config.get('demo:audioSynthesizer:filename')),
+				join(demoDirectory, config.get('demo:audio-synthesizer:filename')),
 				join(buildDirectory, 'music.asm'),
 			]);
 

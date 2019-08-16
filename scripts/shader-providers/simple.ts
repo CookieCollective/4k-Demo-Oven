@@ -24,14 +24,14 @@ export class SimpleShaderProvider implements IShaderProvider {
 	}
 
 	checkConfig() {
-		this.config.required(['demo:shaderProvider:filename']);
+		this.config.required(['demo:shader-provider:filename']);
 	}
 
 	async provide(definition: IShaderDefinition) {
 		const demoDirectory: string = this.config.get('directory');
 
 		const shaderContents = await readFile(
-			join(demoDirectory, this.config.get('demo:shaderProvider:filename')),
+			join(demoDirectory, this.config.get('demo:shader-provider:filename')),
 			'utf8'
 		);
 

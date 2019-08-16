@@ -1,5 +1,5 @@
 demo:
-  audioSynthesizer:
+  audio-synthesizer:
     tool: none
   gl:
     constants:

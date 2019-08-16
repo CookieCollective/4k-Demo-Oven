@@ -93,7 +93,7 @@ export function provideContext(options: IContextOptions): IContext {
 	}
 
 	let audioSynthesizer: IAudioSynthesizer | undefined;
-	switch (config.get('demo:audioSynthesizer:tool') || 'realtime') {
+	switch (config.get('demo:audio-synthesizer:tool') || 'realtime') {
 		case '4klang':
 			audioSynthesizer = new VierKlangAudioSynthesizer(config);
 			break;
@@ -114,7 +114,7 @@ export function provideContext(options: IContextOptions): IContext {
 			break;
 
 		default:
-			throw new Error('Config key "demo:audioSynthesizer:tool" is not valid.');
+			throw new Error('Config key "demo:audio-synthesizer:tool" is not valid.');
 	}
 
 	if (options.capture) {
@@ -130,7 +130,7 @@ export function provideContext(options: IContextOptions): IContext {
 	}
 
 	let shaderProvider: IShaderProvider;
-	switch (config.get('demo:shaderProvider:tool') || 'simple') {
+	switch (config.get('demo:shader-provider:tool') || 'simple') {
 		case 'simple':
 			shaderProvider = new SimpleShaderProvider(config);
 			break;
@@ -140,18 +140,18 @@ export function provideContext(options: IContextOptions): IContext {
 			break;
 
 		default:
-			throw new Error('Config key "demo:shaderProvider:tool" is not valid.');
+			throw new Error('Config key "demo:shader-provider:tool" is not valid.');
 	}
 
 	let shaderMinifier: IShaderMinifier | undefined;
 	if (config.get('minify')) {
-		switch (config.get('demo:shaderMinifier:tool') || 'shader-minifier') {
+		switch (config.get('demo:shader-minifier:tool') || 'shader-minifier') {
 			case 'shader-minifier':
 				shaderMinifier = new ShaderMinifierShaderMinifier(config);
 				break;
 
 			default:
-				throw new Error('Config key "demo:shaderMinifier:tool" is not valid.');
+				throw new Error('Config key "demo:shader-minifier:tool" is not valid.');
 		}
 	}
 

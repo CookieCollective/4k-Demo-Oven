@@ -155,7 +155,7 @@ export async function writeDemoData(context: IContext, demo: IDemoDefinition) {
 	});
 	fileContents.push('};', '');
 
-	if (context.config.get('demo:audioSynthesizer:tool') === 'shader') {
+	if (context.config.get('demo:audio-synthesizer:tool') === 'shader') {
 		fileContents.unshift(
 			'#include "audio-shader.cpp"',
 			'#define AUDIO_TEXTURE'

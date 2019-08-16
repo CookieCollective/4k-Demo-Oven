@@ -20,7 +20,7 @@ export class OidosAudioSynthesizer implements IAudioSynthesizer {
 
 	checkConfig() {
 		this.config.required([
-			'demo:audioSynthesizer:filename',
+			'demo:audio-synthesizer:filename',
 			'tools:oidos',
 			'tools:python2',
 		]);
@@ -41,7 +41,7 @@ export class OidosAudioSynthesizer implements IAudioSynthesizer {
 
 		await spawn(this.config.get('tools:python2'), [
 			join(this.config.get('tools:oidos'), 'convert', 'OidosConvert.py'),
-			join(demoDirectory, this.config.get('demo:audioSynthesizer:filename')),
+			join(demoDirectory, this.config.get('demo:audio-synthesizer:filename')),
 			join(buildDirectory, 'music.asm'),
 		]);
 
