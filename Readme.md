@@ -1,3 +1,5 @@
+DEPRECATED: please have a look at the upcoming [https://github.com/KoltesDigital/shiba](Shiba), which will have the same features and much more!
+
 # 4k Demo Oven
 
 ... with which you'll bake 4k demos for the [Cookie Demoparty](http://cookie.paris/) or other demoparties!
