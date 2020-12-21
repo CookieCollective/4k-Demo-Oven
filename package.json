@@ -15,7 +15,7 @@
     "gulp-cli": "^2.2.0",
     "nconf": "^0.10.0",
     "nconf-yaml": "^1.0.2",
-    "node-notifier": "^5.4.0",
+    "node-notifier": "^8.0.1",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
     "ts-node": "^8.3.0",
